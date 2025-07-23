@@ -1,4 +1,5 @@
 import moment from 'moment-timezone';
+import { extractBlNumber } from '../utils/blExtractor';
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
@@ -24,8 +25,10 @@ export default defineEventHandler(async (event) => {
   try {
     const gmail = await getGmailClient(accessToken);
     
-    // Gmail 검색 쿼리 생성
-    const query = `after:${startDate} before:${endDate}`;
+    // Gmail 검색 쿼리 생성 (Unix 타임스탬프 사용)
+    const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);
+    const endTimestamp = Math.floor(new Date(endDate).getTime() / 1000);
+    const query = `after:${startTimestamp} before:${endTimestamp}`;
     
     // 메일 목록 가져오기
     const response = await gmail.users.messages.list({
@@ -41,19 +44,37 @@ export default defineEventHandler(async (event) => {
     for (const message of messages) {
       const detail = await gmail.users.messages.get({
         userId: 'me',
-        id: message.id!
+        id: message.id!,
+        format: 'full'  // 본문 포함
       });
-      
-      const headers = detail.data.payload?.headers || [];
+
+      const { payload } = detail.data;
+      const headers = payload?.headers || [];
       const subject = headers.find(h => h.name === 'Subject')?.value || '제목 없음';
       const dateHeader = headers.find(h => h.name === 'Date')?.value || '';
-      
+
+      // B/L 번호 추출
+      const blNumber = extractBlNumber(subject);
+
+      // 본문 처리
+      let body = '';
+      if (payload?.parts) {
+        const part = payload.parts.find(p => p.mimeType === 'text/html') || payload.parts.find(p => p.mimeType === 'text/plain');
+        if (part?.body?.data) {
+          body = Buffer.from(part.body.data, 'base64url').toString('utf8');
+        }
+      } else if (payload?.body?.data) {
+        body = Buffer.from(payload.body.data, 'base64url').toString('utf8');
+      }
+
       // 한국 시간으로 변환
       const date = moment(dateHeader).tz('Asia/Seoul');
-      
+
       emailDetails.push({
         id: message.id,
         subject,
+        body, // 본문 추가
+        blNumber, // B/L 번호 추가
         date: date.format('YYYYMMDD'),
         time: date.format('HH:mm')
       });

@@ -17,6 +17,7 @@ export default defineEventHandler(async (event) => {
   
   // 헤더 설정
   worksheet.columns = [
+    { header: 'B/L 번호', key: 'blNumber', width: 25 },
     { header: '제목', key: 'subject', width: 50 },
     { header: '날짜', key: 'date', width: 15 },
     { header: '시간', key: 'time', width: 10 }
@@ -33,6 +34,7 @@ export default defineEventHandler(async (event) => {
   // 데이터 추가
   emails.forEach(email => {
     worksheet.addRow({
+      blNumber: email.blNumber,
       subject: email.subject,
       date: email.date,
       time: email.time

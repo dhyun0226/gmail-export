@@ -39,18 +39,18 @@
           <!-- 날짜 선택 -->
           <div class="grid grid-cols-2 gap-4 mb-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">시작일</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">시작일시</label>
               <input
                 v-model="startDate"
-                type="date"
+                type="datetime-local"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">종료일</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">종료일시</label>
               <input
                 v-model="endDate"
-                type="date"
+                type="datetime-local"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -84,14 +84,18 @@
             <table class="w-full">
               <thead class="bg-gray-50">
                 <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">B/L 번호</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">제목</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">본문 (앞 50자)</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">날짜</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">시간</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-200">
                 <tr v-for="email in displayEmails" :key="email.id">
+                  <td class="px-6 py-4 text-sm text-gray-900">{{ email.blNumber }}</td>
                   <td class="px-6 py-4 text-sm text-gray-900">{{ email.subject }}</td>
+                  <td class="px-6 py-4 text-sm text-gray-500">{{ email.body.substring(0, 50) }}</td>
                   <td class="px-6 py-4 text-sm text-gray-500">{{ email.date }}</td>
                   <td class="px-6 py-4 text-sm text-gray-500">{{ email.time }}</td>
                 </tr>
@@ -125,6 +129,8 @@ import { ref, computed, onMounted } from 'vue';
 interface Email {
   id: string;
   subject: string;
+  body: string;
+  blNumber: string;
   date: string;
   time: string;
 }
@@ -181,8 +187,8 @@ const fetchEmails = async () => {
   try {
     const data = await $fetch('/api/emails', {
       params: {
-        startDate: startDate.value,
-        endDate: endDate.value
+        startDate: new Date(startDate.value).toISOString(),
+        endDate: new Date(endDate.value).toISOString()
       }
     });
     
@@ -198,6 +204,7 @@ const fetchEmails = async () => {
     }
   } finally {
     loading.value = false;
+    console.log('Fetched emails:', emails.value);
   }
 };
 
@@ -235,14 +242,25 @@ const showMore = () => {
   displayCount.value += 50;
 };
 
-// 오늘 날짜 설정
+// 기본 날짜 설정 (어제 하루)
 const setDefaultDates = () => {
-  const today = new Date();
-  const oneMonthAgo = new Date(today);
-  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
   
-  endDate.value = today.toISOString().split('T')[0];
-  startDate.value = oneMonthAgo.toISOString().split('T')[0];
+  const start = new Date(yesterday);
+  start.setHours(0, 0, 0, 0);
+  
+  const end = new Date(yesterday);
+  end.setHours(23, 59, 59, 999);
+
+  // 로컬 시간대에 맞는 YYYY-MM-DDTHH:mm 형식으로 변환
+  const toLocalISOString = (date: Date) => {
+    const pad = (num: number) => num.toString().padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  startDate.value = toLocalISOString(start);
+  endDate.value = toLocalISOString(end);
 };
 
 onMounted(() => {
