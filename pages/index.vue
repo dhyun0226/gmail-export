@@ -22,6 +22,24 @@
       
       <!-- 로그인 상태일 때 -->
       <div v-else class="max-w-4xl mx-auto">
+        <!-- 페이지 네비게이션 -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6">
+          <div class="flex space-x-4">
+            <nuxt-link 
+              to="/"
+              class="text-blue-600 hover:text-blue-700 font-medium"
+            >
+              이메일 내보내기
+            </nuxt-link>
+            <nuxt-link 
+              to="/bl-management"
+              class="text-blue-600 hover:text-blue-700 font-medium"
+            >
+              BL 번호 관리
+            </nuxt-link>
+          </div>
+        </div>
+        
         <div class="bg-white rounded-lg shadow p-6 mb-6">
           <div class="flex justify-between items-center mb-6">
             <div>

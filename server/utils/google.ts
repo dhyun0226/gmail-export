@@ -13,7 +13,8 @@ export function getGoogleAuthClient() {
 export function getAuthUrl(client: any) {
   const scopes = [
     'https://www.googleapis.com/auth/gmail.readonly',
-    'https://www.googleapis.com/auth/userinfo.email'
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/drive.readonly'
   ];
 
   return client.generateAuthUrl({
@@ -28,4 +29,11 @@ export async function getGmailClient(accessToken: string) {
   auth.setCredentials({ access_token: accessToken });
   
   return google.gmail({ version: 'v1', auth });
+}
+
+export async function getDriveClient(accessToken: string) {
+  const auth = getGoogleAuthClient();
+  auth.setCredentials({ access_token: accessToken });
+  
+  return google.drive({ version: 'v3', auth });
 }
