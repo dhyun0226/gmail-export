@@ -1,0 +1,242 @@
+{
+  "description": "리팩토링 전후 메트릭스 수집 템플릿",
+  "version": "1.0",
+  "metrics": {
+    "complexity": {
+      "cyclomatic": {
+        "max": {
+          "before": null,
+          "after": null,
+          "method": null
+        },
+        "average": {
+          "before": null,
+          "after": null
+        },
+        "top5": {
+          "before": [],
+          "after": []
+        }
+      },
+      "cognitive": {
+        "max": {
+          "before": null,
+          "after": null,
+          "method": null
+        },
+        "average": {
+          "before": null,
+          "after": null
+        }
+      }
+    },
+    "size": {
+      "class": {
+        "totalLines": {
+          "before": null,
+          "after": null
+        },
+        "codeLines": {
+          "before": null,
+          "after": null
+        },
+        "methods": {
+          "before": null,
+          "after": null
+        },
+        "fields": {
+          "before": null,
+          "after": null
+        }
+      },
+      "method": {
+        "maxLines": {
+          "before": null,
+          "after": null,
+          "method": null
+        },
+        "avgLines": {
+          "before": null,
+          "after": null
+        },
+        "over30Lines": {
+          "before": null,
+          "after": null
+        }
+      },
+      "files": {
+        "count": {
+          "before": null,
+          "after": null
+        },
+        "distribution": {
+          "controller": null,
+          "service": null,
+          "mapper": null,
+          "xml": null,
+          "dto": null,
+          "other": null
+        }
+      }
+    },
+    "coupling": {
+      "fanIn": {
+        "before": null,
+        "after": null
+      },
+      "fanOut": {
+        "before": null,
+        "after": null
+      },
+      "dependencies": {
+        "before": [],
+        "after": []
+      },
+      "circularDependencies": {
+        "before": null,
+        "after": null
+      }
+    },
+    "cohesion": {
+      "lcom": {
+        "before": null,
+        "after": null
+      },
+      "fieldSharingRate": {
+        "before": null,
+        "after": null
+      },
+      "srpCompliance": {
+        "before": null,
+        "after": null
+      }
+    },
+    "performance": {
+      "api": {
+        "avgResponseTime": {
+          "before": null,
+          "after": null
+        },
+        "maxResponseTime": {
+          "before": null,
+          "after": null
+        },
+        "endpoints": []
+      },
+      "database": {
+        "avgQueryTime": {
+          "before": null,
+          "after": null
+        },
+        "nPlusOneQueries": {
+          "before": null,
+          "after": null
+        },
+        "complexJoins": {
+          "before": null,
+          "after": null
+        },
+        "indexUsage": {
+          "before": null,
+          "after": null
+        }
+      },
+      "caching": {
+        "enabled": {
+          "before": false,
+          "after": false
+        },
+        "hitRate": {
+          "before": null,
+          "after": null
+        },
+        "coverage": {
+          "before": null,
+          "after": null
+        }
+      }
+    },
+    "quality": {
+      "overallScore": {
+        "before": null,
+        "after": null
+      },
+      "maintainability": {
+        "before": null,
+        "after": null
+      },
+      "reliability": {
+        "before": null,
+        "after": null
+      },
+      "security": {
+        "before": null,
+        "after": null
+      },
+      "testability": {
+        "before": null,
+        "after": null
+      }
+    },
+    "testing": {
+      "coverage": {
+        "unit": {
+          "before": null,
+          "after": null
+        },
+        "integration": {
+          "before": null,
+          "after": null
+        },
+        "e2e": {
+          "before": null,
+          "after": null
+        },
+        "overall": {
+          "before": null,
+          "after": null
+        }
+      },
+      "testCount": {
+        "before": null,
+        "after": null
+      },
+      "testExecutionTime": {
+        "before": null,
+        "after": null
+      }
+    },
+    "documentation": {
+      "coverage": {
+        "before": null,
+        "after": null
+      },
+      "javadoc": {
+        "before": null,
+        "after": null
+      },
+      "comments": {
+        "before": null,
+        "after": null
+      }
+    }
+  },
+  "improvements": {
+    "complexity": {
+      "cyclomatic": null,
+      "cognitive": null
+    },
+    "size": {
+      "avgMethodLength": null,
+      "classSize": null
+    },
+    "performance": {
+      "responseTime": null,
+      "queryTime": null
+    },
+    "quality": {
+      "overall": null,
+      "testCoverage": null
+    }
+  }
+}

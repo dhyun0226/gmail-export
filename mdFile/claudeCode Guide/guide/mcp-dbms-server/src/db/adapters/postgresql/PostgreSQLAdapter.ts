@@ -1,0 +1,292 @@
+/**
+ * PostgreSQL 데이터베이스 어댑터
+ * PostgreSQL 특화 기능 구현
+ */
+
+import pg from 'pg';
+import { BaseAdapter } from '../../base/BaseAdapter.js';
+import { PostgreSQLQueryBuilder } from './PostgreSQLQueryBuilder.js';
+import { 
+  DatabaseType, 
+  DatabaseConnectionConfig,
+  QueryResult,
+  Column,
+  Index,
+  ServerStats
+} from '../../interfaces/index.js';
+import { DatabaseError } from '../../../utils/errors.js';
+import { logger } from '../../../utils/logger.js';
+
+const { Pool } = pg;
+
+export class PostgreSQLAdapter extends BaseAdapter {
+  private pool?: pg.Pool;
+
+  constructor(config: DatabaseConnectionConfig) {
+    super(config, new PostgreSQLQueryBuilder());
+  }
+
+  async connect(): Promise<void> {
+    try {
+      this.pool = new Pool({
+        host: this.config.host,
+        port: this.config.port,
+        user: this.config.user,
+        password: this.config.password,
+        database: this.config.database || 'postgres',
+        ssl: this.config.ssl ? { rejectUnauthorized: false } : false,
+        max: this.config.pool?.max || 10,
+        idleTimeoutMillis: this.config.pool?.idleTimeoutMillis || 30000,
+        connectionTimeoutMillis: this.config.connectionTimeout || 2000,
+        ...this.config.options
+      });
+
+      // 연결 테스트
+      const client = await this.pool.connect();
+      await client.query('SELECT 1');
+      client.release();
+
+      this.connected = true;
+    } catch (error) {
+      this.connected = false;
+      this.handleQueryError(error, 'PostgreSQL 연결');
+    }
+  }
+
+  async disconnect(): Promise<void> {
+    try {
+      if (this.pool) {
+        await this.pool.end();
+        this.pool = undefined;
+        this.connected = false;
+      }
+    } catch (error) {
+      this.handleQueryError(error, 'PostgreSQL 연결 종료');
+    }
+  }
+
+  async ping(): Promise<boolean> {
+    try {
+      if (!this.pool) return false;
+      
+      const client = await this.pool.connect();
+      await client.query('SELECT 1');
+      client.release();
+      return true;
+    } catch (error) {
+      logger.error(`PostgreSQL ping 실패: ${this.config.id}`, error);
+      return false;
+    }
+  }
+
+  async executeQuery<T = any>(query: string, params?: any[]): Promise<QueryResult<T>> {
+    if (!this.pool) {
+      throw new DatabaseError('데이터베이스에 연결되지 않았습니다');
+    }
+
+    const startTime = Date.now();
+    let client: pg.PoolClient | undefined;
+
+    try {
+      this.logQuery(query, params);
+      
+      client = await this.pool.connect();
+      const result = await client.query(query, params);
+      
+      const executionTime = Date.now() - startTime;
+      
+      return {
+        rows: result.rows as T[],
+        rowCount: result.rowCount || 0,
+        fields: result.fields?.map(field => ({
+          name: field.name,
+          dataType: this.getPostgreSQLFieldType(field)
+        })),
+        executionTime
+      };
+    } catch (error) {
+      this.handleQueryError(error, '쿼리 실행');
+      throw error; // 반환값 대신 에러를 다시 throw
+    } finally {
+      if (client) {
+        client.release();
+      }
+    }
+  }
+
+  async executeTransaction<T = any>(queries: Array<{ query: string; params?: any[] }>): Promise<T> {
+    if (!this.pool) {
+      throw new DatabaseError('데이터베이스에 연결되지 않았습니다');
+    }
+
+    const client = await this.pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      const results: any[] = [];
+      
+      for (const { query, params } of queries) {
+        this.logQuery(query, params);
+        const result = await client.query(query, params);
+        results.push(result.rows);
+      }
+      
+      await client.query('COMMIT');
+      return results as T;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      this.handleQueryError(error, '트랜잭션 실행');
+    } finally {
+      client.release();
+    }
+  }
+
+  getType(): DatabaseType {
+    return DatabaseType.PostgreSQL;
+  }
+
+  async getVersion(): Promise<string> {
+    const result = await this.executeQuery<{ version: string }>(
+      this.queryBuilder.buildVersionQuery()
+    );
+    return result.rows[0]?.version || 'Unknown';
+  }
+
+  protected buildCreateTableStatement(
+    schema: string,
+    table: string,
+    columns: Column[],
+    indexes: Index[]
+  ): string {
+    const parts: string[] = [];
+    
+    // 테이블명
+    parts.push(`CREATE TABLE ${this.queryBuilder.escapeIdentifier(schema)}.${this.queryBuilder.escapeIdentifier(table)} (`);
+    
+    // 컬럼 정의
+    const columnDefs = columns.map(col => {
+      let def = `  ${this.queryBuilder.escapeIdentifier(col.name)} ${this.queryBuilder.formatDataType(col)}`;
+      
+      if (col.isIdentity) {
+        // PostgreSQL의 SERIAL 타입 또는 IDENTITY 컬럼
+        if (col.dataType.toLowerCase().includes('int')) {
+          const serialType = col.dataType.toLowerCase().includes('bigint') ? 'BIGSERIAL' :
+                           col.dataType.toLowerCase().includes('smallint') ? 'SMALLSERIAL' : 'SERIAL';
+          def = `  ${this.queryBuilder.escapeIdentifier(col.name)} ${serialType}`;
+        } else {
+          def += ' GENERATED BY DEFAULT AS IDENTITY';
+          if (col.identitySeed || col.identityIncrement) {
+            def += ` (START WITH ${col.identitySeed || 1} INCREMENT BY ${col.identityIncrement || 1})`;
+          }
+        }
+      }
+      
+      if (!col.isNullable) {
+        def += ' NOT NULL';
+      }
+      
+      if (col.defaultValue && !col.isIdentity) {
+        def += ` ${this.queryBuilder.formatDefaultValue(col.defaultValue, col.dataType)}`;
+      }
+      
+      return def;
+    });
+    
+    parts.push(columnDefs.join(',\n'));
+    
+    // 제약조건 정의
+    const constraints: string[] = [];
+    
+    // Primary Key
+    const primaryKey = indexes.find(idx => idx.isPrimary);
+    if (primaryKey) {
+      constraints.push(`  CONSTRAINT ${this.queryBuilder.escapeIdentifier(`${table}_pkey`)} PRIMARY KEY (${primaryKey.columns.map(c => this.queryBuilder.escapeIdentifier(c)).join(', ')})`);
+    }
+    
+    // Unique 제약조건
+    indexes.filter(idx => idx.isUnique && !idx.isPrimary).forEach(idx => {
+      constraints.push(`  CONSTRAINT ${this.queryBuilder.escapeIdentifier(idx.name)} UNIQUE (${idx.columns.map(c => this.queryBuilder.escapeIdentifier(c)).join(', ')})`);
+    });
+    
+    if (constraints.length > 0) {
+      parts.push(',\n' + constraints.join(',\n'));
+    }
+    
+    parts.push('\n);');
+    
+    // 인덱스 생성 (일반 인덱스만)
+    const indexStatements = indexes
+      .filter(idx => !idx.isPrimary && !idx.isUnique)
+      .map(idx => {
+        return `CREATE INDEX ${this.queryBuilder.escapeIdentifier(idx.name)} ON ${this.queryBuilder.escapeIdentifier(schema)}.${this.queryBuilder.escapeIdentifier(table)} (${idx.columns.map(c => this.queryBuilder.escapeIdentifier(c)).join(', ')});`;
+      });
+    
+    if (indexStatements.length > 0) {
+      parts.push('\n' + indexStatements.join('\n'));
+    }
+    
+    // 코멘트 추가
+    const commentStatements: string[] = [];
+    
+    // 테이블 코멘트
+    const tableComment = columns.find(col => col.comment);
+    if (tableComment) {
+      commentStatements.push(`COMMENT ON TABLE ${this.queryBuilder.escapeIdentifier(schema)}.${this.queryBuilder.escapeIdentifier(table)} IS '${tableComment.comment?.replace(/'/g, "''")}';`);
+    }
+    
+    // 컬럼 코멘트
+    columns.filter(col => col.comment).forEach(col => {
+      commentStatements.push(`COMMENT ON COLUMN ${this.queryBuilder.escapeIdentifier(schema)}.${this.queryBuilder.escapeIdentifier(table)}.${this.queryBuilder.escapeIdentifier(col.name)} IS '${col.comment?.replace(/'/g, "''")}';`);
+    });
+    
+    if (commentStatements.length > 0) {
+      parts.push('\n' + commentStatements.join('\n'));
+    }
+    
+    return parts.join('');
+  }
+
+  protected transformServerStats(rows: any[]): ServerStats {
+    const stats: Record<string, any> = {};
+    
+    // PostgreSQL 통계를 객체로 변환
+    rows.forEach(row => {
+      stats[row.name] = row.value;
+    });
+    
+    return {
+      uptime: parseInt(stats.uptime || '0'),
+      version: '',  // 별도 쿼리로 조회
+      currentConnections: parseInt(stats.current_connections || '0'),
+      maxConnections: parseInt(stats.max_connections || '0'),
+      totalQueries: parseInt(stats.total_queries || '0'),
+      slowQueries: 0,  // PostgreSQL은 별도 설정 필요
+      bytesReceived: parseInt(stats.bytes_received || '0'),
+      bytesSent: parseInt(stats.bytes_sent || '0'),
+      threadsRunning: parseInt(stats.current_connections || '0'),
+      additionalMetrics: stats
+    };
+  }
+
+  private getPostgreSQLFieldType(field: any): string {
+    // PostgreSQL OID to type name mapping (일부)
+    const oidTypeMap: Record<number, string> = {
+      16: 'BOOLEAN',
+      20: 'BIGINT',
+      21: 'SMALLINT',
+      23: 'INTEGER',
+      25: 'TEXT',
+      700: 'REAL',
+      701: 'DOUBLE PRECISION',
+      1043: 'VARCHAR',
+      1082: 'DATE',
+      1083: 'TIME',
+      1114: 'TIMESTAMP',
+      1184: 'TIMESTAMPTZ',
+      1700: 'NUMERIC'
+    };
+    
+    return oidTypeMap[field.dataTypeID] || 'UNKNOWN';
+  }
+}

@@ -1,0 +1,455 @@
+{
+  "metadata_version": "1.0.0",
+  "schema_version": "2024.1",
+  "template_name": "Vue 3 + Spring Boot Enterprise Template",
+  "template_description": "Vue 3 기반 프론트엔드와 Spring Boot 백엔드를 사용하는 엔터프라이즈 애플리케이션",
+  "last_updated": "2025-07-01T00:00:00Z",
+  "projectInfo": {
+    "name": "enterprise-system",
+    "version": "1.0.0",
+    "description": "Vue 3 + Spring Boot 기반 엔터프라이즈 시스템",
+    "type": "Web Application",
+    "team": "Development Team",
+    "contact": "dev@company.com",
+    "createdAt": "2025-07-01T00:00:00Z",
+    "updatedAt": "2025-07-01T00:00:00Z"
+  },
+  "techStack": {
+    "frontend": {
+      "framework": "Vue 3",
+      "version": "3.4.32",
+      "language": "TypeScript",
+      "language_version": "5.5.3",
+      "ui_library": "Bootstrap Vue Next",
+      "ui_version": "0.15.5",
+      "build_tool": "Vite",
+      "build_version": "4.5.3",
+      "package_manager": "pnpm",
+      "libs": [
+        {
+          "name": "Bootstrap",
+          "version": "5.3.3",
+          "purpose": "CSS Framework"
+        },
+        {
+          "name": "DevExtreme",
+          "version": "22.2.3", 
+          "purpose": "Advanced UI Components"
+        },
+        {
+          "name": "Pinia",
+          "version": "2.1.7",
+          "purpose": "State Management"
+        },
+        {
+          "name": "Vue Router",
+          "version": "4.4.0",
+          "purpose": "Routing"
+        },
+        {
+          "name": "Vue I18n",
+          "version": "9.13.1",
+          "purpose": "Internationalization"
+        },
+        {
+          "name": "Day.js",
+          "version": "1.11.12",
+          "purpose": "Date Manipulation"
+        },
+        {
+          "name": "VueUse",
+          "version": "10.11.0",
+          "purpose": "Vue Composition Utilities"
+        },
+        {
+          "name": "Lodash-es",
+          "version": "4.17.21",
+          "purpose": "Utility Functions"
+        }
+      ]
+    },
+    "backend": {
+      "framework": "Spring Boot",
+      "version": "3.2.x",
+      "language": "Java",
+      "language_version": "17",
+      "build_tool": "Maven",
+      "libs": [
+        {
+          "name": "Spring Security",
+          "purpose": "Authentication & Authorization"
+        },
+        {
+          "name": "Spring Data JPA",
+          "purpose": "Data Access Layer"
+        },
+        {
+          "name": "Hibernate",
+          "purpose": "ORM"
+        },
+        {
+          "name": "Jackson",
+          "purpose": "JSON Processing"
+        },
+        {
+          "name": "Bean Validation",
+          "purpose": "Input Validation"
+        },
+        {
+          "name": "Spring Boot Actuator",
+          "purpose": "Monitoring & Management"
+        },
+        {
+          "name": "Micrometer",
+          "purpose": "Metrics Collection"
+        }
+      ]
+    },
+    "database": {
+      "primary": {
+        "type": "PostgreSQL",
+        "version": "15.x",
+        "purpose": "Primary Database"
+      },
+      "cache": {
+        "type": "Redis",
+        "version": "7.x", 
+        "purpose": "Caching & Session Storage"
+      },
+      "search": null
+    },
+    "infrastructure": {
+      "container": {
+        "type": "Docker",
+        "orchestration": null
+      },
+      "monitoring": {
+        "apm": "Micrometer + Prometheus",
+        "logging": "Logback + ELK Stack",
+        "tracing": "Spring Cloud Sleuth"
+      },
+      "security": {
+        "authentication": "JWT",
+        "authorization": "Spring Security",
+        "encryption": "AES-256"
+      }
+    }
+  },
+  "architecture": {
+    "pattern": "Layered Architecture",
+    "style": "Monolithic",
+    "frontend_structure": {
+      "layers": [
+        {
+          "name": "Presentation Layer",
+          "components": ["Vue Components", "Pages", "Layouts"],
+          "path": "/src/components, /src/pages, /src/layouts"
+        },
+        {
+          "name": "State Management Layer", 
+          "components": ["Pinia Stores", "Composables"],
+          "path": "/src/stores, /src/composables"
+        },
+        {
+          "name": "Service Layer",
+          "components": ["API Services", "Business Logic"],
+          "path": "/src/services, /src/api"
+        },
+        {
+          "name": "Utility Layer",
+          "components": ["Helpers", "Constants", "Types"],
+          "path": "/src/utils, /src/constants, /src/types"
+        }
+      ],
+      "routing": "Vue Router (Hash Mode)",
+      "state_management": "Pinia (Centralized)",
+      "component_pattern": "Composition API + <script setup>"
+    },
+    "backend_structure": {
+      "layers": [
+        {
+          "name": "Presentation Layer",
+          "components": ["REST Controllers", "Request/Response DTOs"],
+          "path": "/controller, /dto"
+        },
+        {
+          "name": "Business Layer",
+          "components": ["Services", "Business Logic", "Validation"],
+          "path": "/service, /business, /validation"
+        },
+        {
+          "name": "Persistence Layer", 
+          "components": ["Repositories", "Entities", "Specifications"],
+          "path": "/repository, /entity, /specification"
+        },
+        {
+          "name": "Infrastructure Layer",
+          "components": ["Configuration", "Security", "Utilities"],
+          "path": "/config, /security, /util"
+        }
+      ],
+      "api_pattern": "RESTful API",
+      "transaction_management": "Spring @Transactional",
+      "exception_handling": "@ControllerAdvice Global Handler"
+    },
+    "communication": {
+      "frontend_backend": "HTTP/REST over HTTPS",
+      "data_format": "JSON",
+      "authentication": "JWT Bearer Token",
+      "cors": "Configured for Development/Production"
+    }
+  },
+  "domain": {
+    "type": "Enterprise Management System",
+    "characteristics": [
+      "Multi-user System",
+      "Role-based Access Control", 
+      "Audit Trail Required",
+      "Data Consistency Critical",
+      "Performance Sensitive"
+    ],
+    "business_rules": [
+      {
+        "category": "Security",
+        "rules": [
+          "All user actions must be logged",
+          "Role-based access control (RBAC)",
+          "Session timeout after 30 minutes",
+          "Password complexity requirements"
+        ]
+      },
+      {
+        "category": "Data Management",
+        "rules": [
+          "Soft delete for important records",
+          "Audit trail for all CRUD operations", 
+          "Data validation on both client and server",
+          "Optimistic locking for concurrent updates"
+        ]
+      },
+      {
+        "category": "Performance",
+        "rules": [
+          "Page loading time < 3 seconds",
+          "API response time < 500ms",
+          "Support 100+ concurrent users",
+          "Client-side caching for static data"
+        ]
+      },
+      {
+        "category": "Usability",
+        "rules": [
+          "Responsive design (Desktop/Tablet)",
+          "Internationalization support (Korean/English)",
+          "Error messages in user-friendly format",
+          "Confirmation dialogs for destructive actions"
+        ]
+      }
+    ],
+    "compliance": [
+      {
+        "standard": "GDPR",
+        "requirements": [
+          "Personal data encryption",
+          "Right to be forgotten",
+          "Data processing consent",
+          "Privacy by design"
+        ]
+      },
+      {
+        "standard": "SOX",
+        "requirements": [
+          "Financial data integrity",
+          "Audit trail maintenance",
+          "Access control documentation",
+          "Change management process"
+        ]
+      }
+    ],
+    "data_patterns": [
+      {
+        "pattern": "CRUD Operations",
+        "description": "Standard Create, Read, Update, Delete operations",
+        "components": ["List View", "Detail View", "Form View", "Confirmation Dialog"]
+      },
+      {
+        "pattern": "Master-Detail",
+        "description": "Parent-child relationship display",
+        "components": ["Master Grid", "Detail Tabs", "Related Records"]
+      },
+      {
+        "pattern": "Workflow Management",
+        "description": "Multi-step business processes",
+        "components": ["Wizard", "Status Tracker", "Approval Chain"]
+      },
+      {
+        "pattern": "Bulk Operations",
+        "description": "Mass data manipulation",
+        "components": ["Bulk Selection", "Batch Actions", "Progress Indicator"]
+      }
+    ]
+  },
+  "standards": {
+    "naming": {
+      "frontend": {
+        "components": "PascalCase with 'Ow' prefix (OwButton, OwDataGrid)",
+        "files": "kebab-case.vue (banned-word-management.vue)",
+        "variables": "camelCase (userName, isActive)",
+        "constants": "UPPER_SNAKE_CASE (API_BASE_URL)",
+        "stores": "camelCase + Store suffix (userStore, bannedWordStore)",
+        "composables": "camelCase with 'use' prefix (useAuth, useApi)"
+      },
+      "backend": {
+        "classes": "PascalCase (BannedWordController, UserService)",
+        "methods": "camelCase (getBannedWords, createUser)",
+        "variables": "camelCase (bannedWord, totalCount)",
+        "constants": "UPPER_SNAKE_CASE (MAX_PAGE_SIZE)",
+        "packages": "lowercase.dot.notation (com.company.system.controller)",
+        "database": "snake_case (banned_words, user_id)"
+      }
+    },
+    "structure": {
+      "frontend": {
+        "root": "/src",
+        "components": "/src/components/{ComponentGroup}/{ComponentName}.vue",
+        "pages": "/src/pages/{FeatureArea}/page.vue",
+        "stores": "/src/stores/{domain}Store.ts",
+        "services": "/src/services/{domain}Service.ts",
+        "types": "/src/types/{domain}.ts",
+        "utils": "/src/utils/{category}.ts"
+      },
+      "backend": {
+        "root": "/src/main/java",
+        "controller": "/controller/{Domain}Controller.java",
+        "service": "/service/{Domain}Service.java", 
+        "repository": "/repository/{Domain}Repository.java",
+        "entity": "/entity/{Domain}.java",
+        "dto": "/dto/{Domain}{Type}Dto.java",
+        "config": "/config/{Feature}Config.java"
+      }
+    },
+    "security": {
+      "authentication": {
+        "method": "JWT Bearer Token",
+        "expiration": "24 hours",
+        "refresh": "7 days",
+        "storage": "HTTP-only Cookie + Local Storage"
+      },
+      "authorization": {
+        "method": "Role-based Access Control (RBAC)",
+        "frontend": "Route guards + Component-level checks",
+        "backend": "@PreAuthorize annotations",
+        "roles": ["ADMIN", "USER", "SYSTEM_MANAGER"]
+      },
+      "input_validation": {
+        "frontend": "Vue 3 Composition API + Custom Validators",
+        "backend": "Bean Validation (@Valid, @NotNull, @Size)",
+        "sanitization": "OWASP Java Encoder"
+      },
+      "data_protection": {
+        "encryption": "AES-256 for sensitive data",
+        "hashing": "BCrypt for passwords",
+        "communication": "HTTPS enforced",
+        "headers": "Security headers (HSTS, CSP, X-Frame-Options)"
+      }
+    },
+    "performance": {
+      "frontend": {
+        "bundling": "Vite code splitting + tree shaking",
+        "components": "Lazy loading for large components",
+        "images": "WebP format + lazy loading",
+        "caching": "Service Worker + HTTP caching",
+        "optimization": "Virtual scrolling for large datasets"
+      },
+      "backend": {
+        "database": "Connection pooling (HikariCP)",
+        "queries": "JPA query optimization + N+1 prevention",
+        "caching": "Redis for frequently accessed data",
+        "pagination": "Server-side pagination with cursors",
+        "async": "CompletableFuture for long operations"
+      }
+    },
+    "testing": {
+      "frontend": {
+        "unit": "Vitest + Vue Test Utils",
+        "integration": "Cypress component testing",
+        "e2e": "Cypress end-to-end testing",
+        "coverage": "80%+ code coverage target"
+      },
+      "backend": {
+        "unit": "JUnit 5 + Mockito",
+        "integration": "Spring Boot Test + TestContainers",
+        "api": "MockMvc + RestAssured",
+        "coverage": "80%+ code coverage target"
+      }
+    }
+  },
+  "component_mappings": {
+    "form_controls": {
+      "text_input": "OwInput",
+      "textarea": "OwTextarea", 
+      "select": "OwFormSelect",
+      "checkbox": "OwFormCheckbox",
+      "radio": "OwFormRadio",
+      "date_picker": "OwBizDatePicker",
+      "date_range": "OwBizDatePickerRange"
+    },
+    "data_display": {
+      "table": "DxDataGrid",
+      "tree": "DxTreeList",
+      "calendar": "OwCalendar",
+      "scheduler": "OwScheduler",
+      "charts": "DxChart"
+    },
+    "navigation": {
+      "pagination": "OwPagination",
+      "tabs": "BTabs",
+      "breadcrumb": "BBreadcrumb",
+      "menu": "BNav"
+    },
+    "feedback": {
+      "alert": "OwAlert",
+      "toast": "BToast",
+      "modal": "OwPopup",
+      "loading": "BSpinner"
+    },
+    "layout": {
+      "container": "BContainer",
+      "row": "BRow",
+      "column": "BCol",
+      "card": "BCard"
+    }
+  },
+  "api_patterns": {
+    "rest_endpoints": {
+      "list": "GET /api/{resource}?page={page}&size={size}&sort={field}&filter={criteria}",
+      "detail": "GET /api/{resource}/{id}",
+      "create": "POST /api/{resource}",
+      "update": "PUT /api/{resource}/{id}",
+      "delete": "DELETE /api/{resource}/{id}",
+      "bulk_delete": "DELETE /api/{resource}/bulk",
+      "export": "GET /api/{resource}/export?format={format}"
+    },
+    "response_format": {
+      "success": {
+        "structure": "{ success: true, data: {}, message: '' }",
+        "pagination": "{ data: [], totalElements: 0, totalPages: 0, number: 0, size: 20 }"
+      },
+      "error": {
+        "structure": "{ success: false, error: { code: '', message: '', details: [] } }",
+        "validation": "{ field: '', message: '', rejectedValue: '' }"
+      }
+    },
+    "status_codes": {
+      "200": "Success (GET, PUT)",
+      "201": "Created (POST)",
+      "204": "No Content (DELETE)",
+      "400": "Bad Request (Validation Error)",
+      "401": "Unauthorized (Authentication Required)",
+      "403": "Forbidden (Insufficient Permissions)",
+      "404": "Not Found (Resource Not Exists)",
+      "409": "Conflict (Duplicate Resource)",
+      "500": "Internal Server Error"
+    }
+  }
+}

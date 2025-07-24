@@ -1,0 +1,324 @@
+{
+  "description": "대시보드 하드코딩 값과 데이터 소스 매핑",
+  "version": "1.0",
+  "mappings": {
+    "hero": {
+      "title": {
+        "template": "${projectName} 모듈 혁신",
+        "variables": {
+          "projectName": "metadata.project.name"
+        }
+      },
+      "badge": {
+        "text": "리팩토링 완료",
+        "icon": "check-circle"
+      },
+      "description": {
+        "template": "${totalLines}줄의 God Class를 깔끔하고 유지보수 가능한 CQRS 아키텍처로 성공적으로 변환했습니다. Java 21 기능을 활용하여 ${complexityReduction} 복잡도 감소와 ${performanceImprovement} 성능 향상을 달성했습니다.",
+        "variables": {
+          "totalLines": "metrics.size.class.totalLines.before",
+          "complexityReduction": "metrics.complexity.improvement",
+          "performanceImprovement": "metrics.performance.apiResponseTime.improvement"
+        }
+      },
+      "stats": [
+        {
+          "valuePath": "summary.duration",
+          "label": "진행 기간",
+          "format": "text"
+        },
+        {
+          "valuePath": "metrics.complexity.improvement",
+          "label": "복잡도 감소",
+          "format": "percentage"
+        },
+        {
+          "valuePath": "metrics.performance.apiResponseTime.improvement",
+          "label": "성능 향상",
+          "format": "percentage"
+        },
+        {
+          "valuePath": "metrics.testing.testsPassed",
+          "label": "테스트 통과",
+          "format": "percentage",
+          "default": "100%"
+        }
+      ]
+    },
+    "metricsCards": [
+      {
+        "type": "danger",
+        "icon": "alert-triangle",
+        "label": "순환 복잡도",
+        "trend": {
+          "type": "negative",
+          "icon": "trending-down",
+          "valuePath": "metrics.complexity.cyclomatic.improvement"
+        },
+        "value": {
+          "template": "${before} → ${after}",
+          "beforePath": "metrics.complexity.cyclomatic.before.max",
+          "afterPath": "metrics.complexity.cyclomatic.after.max"
+        },
+        "description": "CQRS 패턴 구현을 통해 God Class 복잡도를 극적으로 감소했습니다"
+      },
+      {
+        "type": "warning",
+        "icon": "file-text",
+        "label": "평균 메소드 길이",
+        "trend": {
+          "type": "negative",
+          "icon": "trending-down",
+          "valuePath": "metrics.size.method.improvement"
+        },
+        "value": {
+          "template": "${before} → ${after}",
+          "beforePath": "metrics.size.method.avgLines.before",
+          "afterPath": "metrics.size.method.avgLines.after"
+        },
+        "description": "큰 메소드들을 집중된 단일 책임 함수로 분해했습니다"
+      },
+      {
+        "type": "success",
+        "icon": "zap",
+        "label": "API 응답 시간",
+        "trend": {
+          "type": "positive",
+          "icon": "trending-up",
+          "valuePath": "metrics.performance.apiResponseTime.improvement"
+        },
+        "value": {
+          "template": "${before}ms → ${after}ms",
+          "beforePath": "metrics.performance.apiResponseTime.before",
+          "afterPath": "metrics.performance.apiResponseTime.after"
+        },
+        "description": "N+1 쿼리 해결, 캐싱 구현, 데이터베이스 접근 최적화"
+      },
+      {
+        "type": "purple",
+        "icon": "layers",
+        "label": "모듈화된 파일",
+        "trend": {
+          "type": "positive",
+          "icon": "trending-up",
+          "valuePath": "metrics.size.files.improvement"
+        },
+        "value": {
+          "template": "${before} → ${after}",
+          "beforePath": "metrics.size.files.count.before",
+          "afterPath": "metrics.size.files.count.after"
+        },
+        "description": "단일 거대 서비스를 집중되고 재사용 가능한 컴포넌트로 분리"
+      }
+    ],
+    "problems": {
+      "overview": {
+        "criticalCount": "issues.critical.identified",
+        "majorCount": "issues.major.identified",
+        "minorCount": "issues.minor.identified",
+        "resolvedCritical": "issues.critical.resolved",
+        "resolvedMajor": "issues.major.resolved",
+        "resolvedMinor": "issues.minor.resolved"
+      },
+      "criticalIssues": [
+        {
+          "icon": "layers",
+          "title": "God Class - ${className}",
+          "titleVariables": {
+            "className": "issues.critical.details[0].location"
+          },
+          "severity": "Critical",
+          "stats": [
+            {
+              "label": "라인 수",
+              "valuePath": "metrics.size.class.totalLines.before",
+              "suffix": "줄"
+            },
+            {
+              "label": "메소드 수",
+              "valuePath": "metrics.size.class.methods.before",
+              "suffix": "개"
+            },
+            {
+              "label": "복잡도",
+              "valuePath": "metrics.complexity.cyclomatic.before.max"
+            }
+          ],
+          "resolution": {
+            "template": "${fileCount}개의 도메인별 클래스로 분리",
+            "variables": {
+              "fileCount": "metrics.size.files.count.after"
+            }
+          }
+        },
+        {
+          "icon": "file-text",
+          "title": "Long Method",
+          "severity": "Critical",
+          "stats": [
+            {
+              "label": "최대 길이",
+              "valuePath": "metrics.size.method.maxLines.before",
+              "suffix": "줄"
+            },
+            {
+              "label": "평균 길이",
+              "valuePath": "metrics.size.method.avgLines.before",
+              "suffix": "줄"
+            }
+          ],
+          "resolution": {
+            "text": "작은 단위의 메소드로 분해"
+          }
+        }
+      ]
+    },
+    "performance": {
+      "apiChart": {
+        "endpoints": [
+          {
+            "name": "주문 생성",
+            "beforePath": "performance.api.endpoints[0].before.avgResponseTime",
+            "afterPath": "performance.api.endpoints[0].after.avgResponseTime"
+          },
+          {
+            "name": "주문 조회",
+            "beforePath": "performance.api.endpoints[1].before.avgResponseTime",
+            "afterPath": "performance.api.endpoints[1].after.avgResponseTime"
+          },
+          {
+            "name": "고객 조회",
+            "beforePath": "performance.api.endpoints[2].before.avgResponseTime",
+            "afterPath": "performance.api.endpoints[2].after.avgResponseTime"
+          },
+          {
+            "name": "결제 처리",
+            "beforePath": "performance.api.endpoints[3].before.avgResponseTime",
+            "afterPath": "performance.api.endpoints[3].after.avgResponseTime"
+          }
+        ]
+      },
+      "queryOptimization": {
+        "nPlusOne": {
+          "beforePath": "performance.database.nPlusOneQueries.before",
+          "afterPath": "performance.database.nPlusOneQueries.after"
+        },
+        "avgQueryTime": {
+          "beforePath": "performance.database.avgQueryTime.before",
+          "afterPath": "performance.database.avgQueryTime.after"
+        },
+        "cacheHitRate": {
+          "path": "performance.caching.metrics.hitRate.after",
+          "default": "0%"
+        }
+      }
+    },
+    "patterns": {
+      "applied": [
+        {
+          "name": "CQRS",
+          "icon": "git-branch",
+          "description": "명령과 조회 책임 분리",
+          "impact": "높음",
+          "benefits": [
+            "읽기/쓰기 최적화",
+            "확장성 향상",
+            "성능 개선"
+          ]
+        },
+        {
+          "name": "Repository",
+          "icon": "database",
+          "description": "데이터 접근 추상화",
+          "impact": "중간",
+          "benefits": [
+            "테스트 용이성",
+            "데이터 소스 독립성"
+          ]
+        },
+        {
+          "name": "Factory",
+          "icon": "package",
+          "description": "객체 생성 캡슐화",
+          "impact": "중간",
+          "benefits": [
+            "객체 생성 로직 중앙화",
+            "유연한 인스턴스 생성"
+          ]
+        },
+        {
+          "name": "Strategy",
+          "icon": "shuffle",
+          "description": "알고리즘 교체 가능",
+          "impact": "중간",
+          "benefits": [
+            "런타임 알고리즘 변경",
+            "확장 가능한 비즈니스 로직"
+          ]
+        }
+      ]
+    },
+    "beforeAfter": {
+      "architecture": {
+        "before": {
+          "title": "레거시 아키텍처",
+          "type": "monolithic",
+          "issues": [
+            "높은 결합도",
+            "테스트 어려움",
+            "확장성 부족",
+            "유지보수 어려움"
+          ]
+        },
+        "after": {
+          "title": "리팩토링된 아키텍처",
+          "type": "layered",
+          "improvements": [
+            "명확한 계층 분리",
+            "테스트 용이",
+            "독립적 확장 가능",
+            "유지보수 용이"
+          ]
+        }
+      }
+    },
+    "charts": {
+      "complexity": {
+        "type": "bar",
+        "datasets": [
+          {
+            "label": "Before",
+            "data": [
+              "metrics.complexity.cyclomatic.before.max",
+              "metrics.complexity.cyclomatic.before.average",
+              "metrics.size.method.avgLines.before"
+            ],
+            "backgroundColor": "rgba(255, 99, 132, 0.5)"
+          },
+          {
+            "label": "After",
+            "data": [
+              "metrics.complexity.cyclomatic.after.max",
+              "metrics.complexity.cyclomatic.after.average",
+              "metrics.size.method.avgLines.after"
+            ],
+            "backgroundColor": "rgba(75, 192, 192, 0.5)"
+          }
+        ]
+      },
+      "issues": {
+        "type": "doughnut",
+        "data": {
+          "resolved": "issues.summary.totalResolved",
+          "remaining": "issues.summary.remainingIssues.total"
+        }
+      }
+    }
+  },
+  "defaults": {
+    "noData": "N/A",
+    "percentageFormat": "${value}%",
+    "numberFormat": "${value}",
+    "timeFormat": "${value}ms"
+  }
+}

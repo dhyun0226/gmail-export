@@ -1,0 +1,239 @@
+{
+  "description": "대시보드용 통합 데이터 템플릿",
+  "version": "1.0",
+  "metadata": {
+    "project": {
+      "name": null,
+      "description": null,
+      "repository": null,
+      "team": null
+    },
+    "refactoring": {
+      "startDate": null,
+      "endDate": null,
+      "duration": null,
+      "scope": {
+        "targetClass": null,
+        "layers": ["Controller", "Service", "Mapper", "XML"],
+        "domains": []
+      }
+    },
+    "generation": {
+      "timestamp": null,
+      "version": "1.0",
+      "tool": "AI Refactoring Dashboard Generator"
+    }
+  },
+  "summary": {
+    "overview": {
+      "totalFiles": {
+        "before": null,
+        "after": null,
+        "change": null
+      },
+      "totalLines": {
+        "before": null,
+        "after": null,
+        "change": null
+      },
+      "complexity": {
+        "before": null,
+        "after": null,
+        "improvement": null
+      },
+      "performance": {
+        "before": null,
+        "after": null,
+        "improvement": null
+      },
+      "quality": {
+        "before": null,
+        "after": null,
+        "grade": null
+      }
+    },
+    "achievements": {
+      "primaryGoals": [],
+      "additionalBenefits": [],
+      "challenges": []
+    }
+  },
+  "timeline": [
+    {
+      "phase": "Analysis",
+      "startDate": null,
+      "endDate": null,
+      "milestones": [
+        {
+          "name": "Dependency Analysis",
+          "completed": false,
+          "date": null
+        },
+        {
+          "name": "Metrics Collection",
+          "completed": false,
+          "date": null
+        }
+      ]
+    },
+    {
+      "phase": "Planning",
+      "startDate": null,
+      "endDate": null,
+      "milestones": [
+        {
+          "name": "Domain Separation",
+          "completed": false,
+          "date": null
+        },
+        {
+          "name": "Pattern Selection",
+          "completed": false,
+          "date": null
+        }
+      ]
+    },
+    {
+      "phase": "Implementation",
+      "startDate": null,
+      "endDate": null,
+      "milestones": [
+        {
+          "name": "Controller Refactoring",
+          "completed": false,
+          "date": null
+        },
+        {
+          "name": "Service Refactoring",
+          "completed": false,
+          "date": null
+        },
+        {
+          "name": "Mapper Refactoring",
+          "completed": false,
+          "date": null
+        },
+        {
+          "name": "XML Refactoring",
+          "completed": false,
+          "date": null
+        }
+      ]
+    },
+    {
+      "phase": "Verification",
+      "startDate": null,
+      "endDate": null,
+      "milestones": [
+        {
+          "name": "Functional Testing",
+          "completed": false,
+          "date": null
+        },
+        {
+          "name": "Performance Testing",
+          "completed": false,
+          "date": null
+        },
+        {
+          "name": "Security Testing",
+          "completed": false,
+          "date": null
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "complexity": {},
+    "size": {},
+    "coupling": {},
+    "cohesion": {},
+    "performance": {},
+    "quality": {},
+    "testing": {}
+  },
+  "issues": {
+    "summary": {},
+    "critical": [],
+    "major": [],
+    "minor": [],
+    "security": {}
+  },
+  "patterns": {
+    "applied": [
+      {
+        "name": null,
+        "type": null,
+        "locations": [],
+        "impact": null,
+        "benefits": []
+      }
+    ],
+    "architectural": {
+      "before": {
+        "style": null,
+        "layers": [],
+        "issues": []
+      },
+      "after": {
+        "style": null,
+        "layers": [],
+        "improvements": []
+      }
+    }
+  },
+  "domains": [
+    {
+      "name": null,
+      "description": null,
+      "classes": {
+        "controller": [],
+        "service": [],
+        "mapper": [],
+        "dto": []
+      },
+      "metrics": {
+        "methods": null,
+        "lines": null,
+        "complexity": null
+      }
+    }
+  ],
+  "charts": {
+    "complexity": {
+      "type": "bar",
+      "data": {},
+      "options": {}
+    },
+    "performance": {
+      "type": "line",
+      "data": {},
+      "options": {}
+    },
+    "issues": {
+      "type": "doughnut",
+      "data": {},
+      "options": {}
+    },
+    "timeline": {
+      "type": "gantt",
+      "data": {},
+      "options": {}
+    },
+    "architecture": {
+      "type": "sunburst",
+      "data": {},
+      "options": {}
+    }
+  },
+  "recommendations": {
+    "immediate": [],
+    "shortTerm": [],
+    "longTerm": []
+  },
+  "lessons": {
+    "learned": [],
+    "bestPractices": [],
+    "pitfalls": []
+  }
+}

@@ -1,0 +1,364 @@
+{
+  "metadata_engine": {
+    "version": "2.0.0",
+    "scan_config": {
+      "scan_modes": {
+        "standard": {
+          "description": "빠른 스캔 (90% 정확도, 1-2분)",
+          "depth": 3,
+          "file_limit": 500,
+          "analysis_timeout": 120000,
+          "cache_enabled": true
+        },
+        "deep": {
+          "description": "심층 스캔 (95% 정확도, 3-5분)",
+          "depth": 5,
+          "file_limit": 1000,
+          "analysis_timeout": 300000,
+          "cache_enabled": false
+        },
+        "fast": {
+          "description": "초고속 스캔 (85% 정확도, 30초)",
+          "depth": 2,
+          "file_limit": 200,
+          "analysis_timeout": 30000,
+          "cache_enabled": true
+        }
+      },
+      "file_patterns": {
+        "frontend": {
+          "package_files": [
+            "**/package.json",
+            "**/package-lock.json",
+            "**/yarn.lock",
+            "**/pnpm-lock.yaml"
+          ],
+          "config_files": [
+            "**/vite.config.{js,ts}",
+            "**/webpack.config.{js,ts}",
+            "**/vue.config.{js,ts}",
+            "**/nuxt.config.{js,ts}",
+            "**/next.config.{js,ts}",
+            "**/tsconfig.json",
+            "**/jsconfig.json"
+          ],
+          "source_files": [
+            "**/src/main.{js,ts}",
+            "**/src/index.{js,ts}",
+            "**/src/app.{js,ts,vue,jsx,tsx}",
+            "**/src/**/*.{vue,jsx,tsx}",
+            "**/pages/**/*.{vue,jsx,tsx}",
+            "**/components/**/*.{vue,jsx,tsx}"
+          ],
+          "style_files": [
+            "**/src/**/*.{css,scss,sass,less,styl}",
+            "**/assets/**/*.{css,scss,sass,less,styl}"
+          ]
+        },
+        "backend": {
+          "java": {
+            "build_files": [
+              "**/pom.xml",
+              "**/build.gradle",
+              "**/gradle.properties"
+            ],
+            "config_files": [
+              "**/application.{yml,yaml,properties}",
+              "**/application-*.{yml,yaml,properties}",
+              "**/bootstrap.{yml,yaml,properties}"
+            ],
+            "source_files": [
+              "**/src/main/java/**/*.java",
+              "**/src/main/resources/**/*"
+            ]
+          },
+          "nodejs": {
+            "package_files": [
+              "**/package.json",
+              "**/package-lock.json"
+            ],
+            "config_files": [
+              "**/server.{js,ts}",
+              "**/app.{js,ts}",
+              "**/index.{js,ts}",
+              "**/.env*",
+              "**/config/**/*.{js,ts,json}"
+            ],
+            "source_files": [
+              "**/src/**/*.{js,ts}",
+              "**/routes/**/*.{js,ts}",
+              "**/controllers/**/*.{js,ts}",
+              "**/models/**/*.{js,ts}",
+              "**/services/**/*.{js,ts}"
+            ]
+          },
+          "python": {
+            "config_files": [
+              "**/requirements.txt",
+              "**/Pipfile",
+              "**/pyproject.toml",
+              "**/setup.py",
+              "**/settings.py",
+              "**/config.py"
+            ],
+            "source_files": [
+              "**/*.py",
+              "**/manage.py",
+              "**/wsgi.py",
+              "**/asgi.py"
+            ]
+          }
+        },
+        "infrastructure": {
+          "docker_files": [
+            "**/Dockerfile*",
+            "**/docker-compose*.{yml,yaml}",
+            "**/.dockerignore"
+          ],
+          "k8s_files": [
+            "**/k8s/**/*.{yml,yaml}",
+            "**/kubernetes/**/*.{yml,yaml}",
+            "**/*-deployment.{yml,yaml}",
+            "**/*-service.{yml,yaml}"
+          ],
+          "ci_cd_files": [
+            "**/.github/workflows/*.{yml,yaml}",
+            "**/.gitlab-ci.yml",
+            "**/Jenkinsfile",
+            "**/azure-pipelines.yml"
+          ]
+        }
+      },
+      "ignore_patterns": [
+        "**/node_modules/**",
+        "**/target/**",
+        "**/build/**",
+        "**/dist/**",
+        "**/.git/**",
+        "**/.next/**",
+        "**/.nuxt/**",
+        "**/coverage/**",
+        "**/*.log",
+        "**/tmp/**",
+        "**/temp/**"
+      ]
+    },
+    "analysis_rules": {
+      "frontend_detection": {
+        "vue": {
+          "indicators": [
+            {
+              "type": "package_dependency",
+              "patterns": ["vue@^3", "vue@3", "@vue/cli"],
+              "weight": 90
+            },
+            {
+              "type": "file_existence",
+              "patterns": ["**/src/main.{js,ts}", "**/src/App.vue"],
+              "weight": 80
+            },
+            {
+              "type": "file_content",
+              "patterns": ["createApp\\(", "Vue\\.createApp"],
+              "weight": 70
+            }
+          ],
+          "threshold": 150
+        },
+        "react": {
+          "indicators": [
+            {
+              "type": "package_dependency",
+              "patterns": ["react@^18", "react@^17", "react@16"],
+              "weight": 90
+            },
+            {
+              "type": "file_existence",
+              "patterns": ["**/src/App.{jsx,tsx}", "**/src/index.{jsx,tsx}"],
+              "weight": 80
+            },
+            {
+              "type": "file_content",
+              "patterns": ["React\\.createElement", "import.*React"],
+              "weight": 70
+            }
+          ],
+          "threshold": 150
+        },
+        "angular": {
+          "indicators": [
+            {
+              "type": "package_dependency",
+              "patterns": ["@angular/core", "@angular/cli"],
+              "weight": 90
+            },
+            {
+              "type": "file_existence",
+              "patterns": ["**/angular.json", "**/src/main.ts"],
+              "weight": 80
+            },
+            {
+              "type": "file_content",
+              "patterns": ["@Component", "@NgModule"],
+              "weight": 70
+            }
+          ],
+          "threshold": 150
+        }
+      },
+      "backend_detection": {
+        "spring_boot": {
+          "indicators": [
+            {
+              "type": "package_dependency",
+              "patterns": ["spring-boot-starter", "org.springframework.boot"],
+              "weight": 90
+            },
+            {
+              "type": "file_existence",
+              "patterns": ["**/application.{yml,properties}", "**/pom.xml"],
+              "weight": 80
+            },
+            {
+              "type": "file_content",
+              "patterns": ["@SpringBootApplication", "@RestController"],
+              "weight": 70
+            }
+          ],
+          "threshold": 150
+        },
+        "express": {
+          "indicators": [
+            {
+              "type": "package_dependency",
+              "patterns": ["express"],
+              "weight": 90
+            },
+            {
+              "type": "file_existence",
+              "patterns": ["**/server.{js,ts}", "**/app.{js,ts}"],
+              "weight": 70
+            },
+            {
+              "type": "file_content",
+              "patterns": ["express\\(\\)", "app\\.listen"],
+              "weight": 60
+            }
+          ],
+          "threshold": 130
+        },
+        "django": {
+          "indicators": [
+            {
+              "type": "package_dependency",
+              "patterns": ["Django", "django"],
+              "weight": 90
+            },
+            {
+              "type": "file_existence",
+              "patterns": ["**/manage.py", "**/settings.py"],
+              "weight": 80
+            },
+            {
+              "type": "file_content",
+              "patterns": ["from django", "INSTALLED_APPS"],
+              "weight": 70
+            }
+          ],
+          "threshold": 150
+        }
+      },
+      "database_detection": {
+        "postgresql": {
+          "indicators": [
+            {
+              "type": "package_dependency",
+              "patterns": ["postgresql", "pg", "psycopg2"],
+              "weight": 90
+            },
+            {
+              "type": "config_content",
+              "patterns": ["postgresql://", "postgres://", "driver.*postgresql"],
+              "weight": 80
+            }
+          ],
+          "threshold": 100
+        },
+        "mysql": {
+          "indicators": [
+            {
+              "type": "package_dependency",
+              "patterns": ["mysql", "mysql2", "mysql-connector"],
+              "weight": 90
+            },
+            {
+              "type": "config_content",
+              "patterns": ["mysql://", "driver.*mysql"],
+              "weight": 80
+            }
+          ],
+          "threshold": 100
+        },
+        "mongodb": {
+          "indicators": [
+            {
+              "type": "package_dependency",
+              "patterns": ["mongodb", "mongoose"],
+              "weight": 90
+            },
+            {
+              "type": "config_content",
+              "patterns": ["mongodb://", "mongoose\\.connect"],
+              "weight": 80
+            }
+          ],
+          "threshold": 100
+        }
+      },
+      "architecture_detection": {
+        "monolithic": {
+          "indicators": [
+            {
+              "type": "project_structure",
+              "patterns": ["single_main_app", "unified_database"],
+              "weight": 70
+            }
+          ],
+          "threshold": 70
+        },
+        "microservices": {
+          "indicators": [
+            {
+              "type": "project_structure",
+              "patterns": ["multiple_apps", "service_discovery"],
+              "weight": 80
+            },
+            {
+              "type": "package_dependency",
+              "patterns": ["spring-cloud", "consul", "eureka"],
+              "weight": 70
+            }
+          ],
+          "threshold": 100
+        },
+        "layered": {
+          "indicators": [
+            {
+              "type": "directory_structure",
+              "patterns": ["controller", "service", "repository", "entity"],
+              "weight": 80
+            }
+          ],
+          "threshold": 80
+        }
+      }
+    },
+    "output_config": {
+      "metadata_location": ".ai-metadata",
+      "backup_enabled": true,
+      "backup_location": ".ai-metadata/backups",
+      "validation_enabled": true,
+      "auto_update_check": true
+    }
+  }
+}

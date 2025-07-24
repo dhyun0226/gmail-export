@@ -1,0 +1,449 @@
+{
+  "metadata_version": "1.0.0",
+  "schema_version": "2024.1",
+  "template_name": "React + Node.js Modern Stack Template",
+  "template_description": "React 18 프론트엔드와 Node.js/Express 백엔드를 사용하는 모던 웹 애플리케이션",
+  "last_updated": "2025-07-01T00:00:00Z",
+  "projectInfo": {
+    "name": "modern-web-app",
+    "version": "1.0.0",
+    "description": "React + Node.js 기반 모던 웹 애플리케이션",
+    "type": "Web Application",
+    "team": "Frontend Team",
+    "contact": "frontend@company.com",
+    "createdAt": "2025-07-01T00:00:00Z",
+    "updatedAt": "2025-07-01T00:00:00Z"
+  },
+  "techStack": {
+    "frontend": {
+      "framework": "React",
+      "version": "18.2.0",
+      "language": "TypeScript",
+      "language_version": "5.0.x",
+      "ui_library": "Material-UI",
+      "ui_version": "5.14.x",
+      "build_tool": "Vite",
+      "build_version": "4.4.x",
+      "package_manager": "npm",
+      "libs": [
+        {
+          "name": "React Router DOM",
+          "version": "6.15.x",
+          "purpose": "Routing"
+        },
+        {
+          "name": "Redux Toolkit",
+          "version": "1.9.x",
+          "purpose": "State Management"
+        },
+        {
+          "name": "React Query (TanStack Query)",
+          "version": "4.32.x",
+          "purpose": "Server State Management"
+        },
+        {
+          "name": "Material-UI",
+          "version": "5.14.x",
+          "purpose": "UI Components"
+        },
+        {
+          "name": "React Hook Form",
+          "version": "7.45.x",
+          "purpose": "Form Management"
+        },
+        {
+          "name": "Axios",
+          "version": "1.5.x",
+          "purpose": "HTTP Client"
+        },
+        {
+          "name": "Date-fns",
+          "version": "2.30.x",
+          "purpose": "Date Manipulation"
+        },
+        {
+          "name": "React Data Grid",
+          "version": "7.0.x",
+          "purpose": "Data Tables"
+        }
+      ]
+    },
+    "backend": {
+      "framework": "Express.js",
+      "version": "4.18.x",
+      "language": "Node.js",
+      "language_version": "18.x",
+      "runtime": "TypeScript",
+      "build_tool": "npm",
+      "libs": [
+        {
+          "name": "Express",
+          "purpose": "Web Framework"
+        },
+        {
+          "name": "Mongoose",
+          "purpose": "MongoDB ODM"
+        },
+        {
+          "name": "Passport.js",
+          "purpose": "Authentication"
+        },
+        {
+          "name": "Express Validator",
+          "purpose": "Input Validation"
+        },
+        {
+          "name": "Helmet",
+          "purpose": "Security Headers"
+        },
+        {
+          "name": "CORS",
+          "purpose": "Cross-Origin Resource Sharing"
+        },
+        {
+          "name": "Winston",
+          "purpose": "Logging"
+        },
+        {
+          "name": "Compression",
+          "purpose": "Response Compression"
+        }
+      ]
+    },
+    "database": {
+      "primary": {
+        "type": "MongoDB",
+        "version": "7.x",
+        "purpose": "Primary Database"
+      },
+      "cache": {
+        "type": "Redis",
+        "version": "7.x",
+        "purpose": "Caching & Session Storage"
+      },
+      "search": {
+        "type": "Elasticsearch",
+        "version": "8.x",
+        "purpose": "Full-text Search"
+      }
+    },
+    "infrastructure": {
+      "container": {
+        "type": "Docker",
+        "orchestration": "Docker Compose"
+      },
+      "monitoring": {
+        "apm": "New Relic",
+        "logging": "Winston + ELK Stack",
+        "tracing": "OpenTelemetry"
+      },
+      "security": {
+        "authentication": "JWT + OAuth 2.0",
+        "authorization": "Role-based",
+        "encryption": "bcrypt + AES-256"
+      }
+    }
+  },
+  "architecture": {
+    "pattern": "Component-based Architecture",
+    "style": "SPA (Single Page Application)",
+    "frontend_structure": {
+      "layers": [
+        {
+          "name": "Presentation Layer",
+          "components": ["React Components", "Pages", "Layouts"],
+          "path": "/src/components, /src/pages, /src/layouts"
+        },
+        {
+          "name": "State Management Layer",
+          "components": ["Redux Store", "React Query", "Context"],
+          "path": "/src/store, /src/hooks, /src/context"
+        },
+        {
+          "name": "Service Layer",
+          "components": ["API Services", "HTTP Client"],
+          "path": "/src/services, /src/api"
+        },
+        {
+          "name": "Utility Layer",
+          "components": ["Utils", "Constants", "Types"],
+          "path": "/src/utils, /src/constants, /src/types"
+        }
+      ],
+      "routing": "React Router (Browser Router)",
+      "state_management": "Redux Toolkit + React Query",
+      "component_pattern": "Functional Components + Hooks"
+    },
+    "backend_structure": {
+      "layers": [
+        {
+          "name": "Route Layer",
+          "components": ["Express Routes", "Middleware"],
+          "path": "/routes, /middleware"
+        },
+        {
+          "name": "Controller Layer",
+          "components": ["Controllers", "Request Handlers"],
+          "path": "/controllers"
+        },
+        {
+          "name": "Service Layer",
+          "components": ["Business Logic", "Services"],
+          "path": "/services"
+        },
+        {
+          "name": "Data Layer",
+          "components": ["Models", "Database Access"],
+          "path": "/models, /database"
+        }
+      ],
+      "api_pattern": "RESTful API",
+      "middleware": "Express Middleware Chain",
+      "error_handling": "Global Error Handler"
+    },
+    "communication": {
+      "frontend_backend": "HTTP/REST over HTTPS",
+      "data_format": "JSON",
+      "authentication": "JWT Bearer Token",
+      "real_time": "Socket.io (Optional)"
+    }
+  },
+  "domain": {
+    "type": "Modern Web Application",
+    "characteristics": [
+      "Single Page Application",
+      "Real-time Updates",
+      "Mobile-responsive Design",
+      "Progressive Web App Features",
+      "API-first Architecture"
+    ],
+    "business_rules": [
+      {
+        "category": "User Experience",
+        "rules": [
+          "Responsive design for all screen sizes",
+          "Loading states for async operations",
+          "Error boundaries for error handling",
+          "Optimistic updates for better UX"
+        ]
+      },
+      {
+        "category": "Performance",
+        "rules": [
+          "Code splitting for route-based chunks",
+          "Lazy loading for heavy components",
+          "Image optimization and lazy loading",
+          "Service worker for offline functionality"
+        ]
+      },
+      {
+        "category": "Security",
+        "rules": [
+          "Input sanitization on client and server",
+          "XSS protection with Content Security Policy",
+          "CSRF protection for state-changing operations",
+          "Secure authentication flow"
+        ]
+      }
+    ],
+    "compliance": [
+      {
+        "standard": "WCAG 2.1",
+        "requirements": [
+          "Keyboard navigation support",
+          "Screen reader compatibility",
+          "Color contrast compliance",
+          "Alternative text for images"
+        ]
+      },
+      {
+        "standard": "GDPR",
+        "requirements": [
+          "Cookie consent management",
+          "Data processing transparency",
+          "Right to data deletion",
+          "Privacy by design"
+        ]
+      }
+    ],
+    "data_patterns": [
+      {
+        "pattern": "CRUD Operations",
+        "description": "Standard data operations with optimistic updates",
+        "components": ["Data Grid", "Forms", "Modal Dialogs"]
+      },
+      {
+        "pattern": "Real-time Updates",
+        "description": "Live data synchronization",
+        "components": ["WebSocket Connection", "Live Notifications"]
+      },
+      {
+        "pattern": "Infinite Scrolling",
+        "description": "Progressive data loading",
+        "components": ["Virtual Lists", "Intersection Observer"]
+      }
+    ]
+  },
+  "standards": {
+    "naming": {
+      "frontend": {
+        "components": "PascalCase (UserProfile, DataTable)",
+        "files": "PascalCase.tsx (UserProfile.tsx)",
+        "variables": "camelCase (userName, isLoading)",
+        "constants": "UPPER_SNAKE_CASE (API_BASE_URL)",
+        "hooks": "camelCase with 'use' prefix (useAuth, useApi)",
+        "types": "PascalCase with Type suffix (UserType, ApiResponseType)"
+      },
+      "backend": {
+        "files": "camelCase.ts (userController.ts)",
+        "functions": "camelCase (getUserById, createUser)",
+        "variables": "camelCase (userData, totalCount)",
+        "constants": "UPPER_SNAKE_CASE (MAX_PAGE_SIZE)",
+        "routes": "kebab-case (/api/user-profiles)",
+        "database": "camelCase (userId, createdAt)"
+      }
+    },
+    "structure": {
+      "frontend": {
+        "root": "/src",
+        "components": "/src/components/{Category}/{ComponentName}.tsx",
+        "pages": "/src/pages/{FeatureName}Page.tsx",
+        "hooks": "/src/hooks/use{FeatureName}.ts",
+        "store": "/src/store/{domain}Slice.ts",
+        "services": "/src/services/{domain}Service.ts",
+        "types": "/src/types/{domain}.types.ts"
+      },
+      "backend": {
+        "root": "/src",
+        "routes": "/src/routes/{domain}Routes.ts",
+        "controllers": "/src/controllers/{domain}Controller.ts",
+        "services": "/src/services/{domain}Service.ts",
+        "models": "/src/models/{Domain}Model.ts",
+        "middleware": "/src/middleware/{feature}Middleware.ts"
+      }
+    },
+    "security": {
+      "authentication": {
+        "method": "JWT + Refresh Token",
+        "expiration": "15 minutes (Access) / 7 days (Refresh)",
+        "storage": "HTTP-only Cookie (Refresh) + Memory (Access)",
+        "flow": "OAuth 2.0 Authorization Code Flow"
+      },
+      "authorization": {
+        "method": "Role-based Access Control",
+        "frontend": "Route guards + Component guards",
+        "backend": "Middleware-based authorization",
+        "roles": ["admin", "user", "moderator"]
+      },
+      "input_validation": {
+        "frontend": "React Hook Form + Yup validation",
+        "backend": "Express Validator middleware",
+        "sanitization": "DOMPurify for HTML content"
+      },
+      "data_protection": {
+        "encryption": "bcrypt for passwords, AES-256 for sensitive data",
+        "communication": "HTTPS enforced in production",
+        "headers": "Helmet.js security headers"
+      }
+    },
+    "performance": {
+      "frontend": {
+        "bundling": "Vite with code splitting",
+        "components": "React.lazy() for dynamic imports",
+        "images": "Modern formats (WebP, AVIF) + lazy loading",
+        "caching": "React Query for server state caching",
+        "optimization": "React.memo() for expensive components"
+      },
+      "backend": {
+        "database": "Connection pooling + query optimization",
+        "caching": "Redis for session and frequently accessed data",
+        "compression": "Gzip compression for responses",
+        "monitoring": "Performance metrics with Winston + APM"
+      }
+    },
+    "testing": {
+      "frontend": {
+        "unit": "Jest + React Testing Library",
+        "integration": "Jest + MSW (Mock Service Worker)",
+        "e2e": "Playwright",
+        "coverage": "80%+ code coverage target"
+      },
+      "backend": {
+        "unit": "Jest + Supertest",
+        "integration": "Jest + MongoDB Memory Server",
+        "api": "Postman/Newman automated tests",
+        "coverage": "80%+ code coverage target"
+      }
+    }
+  },
+  "component_mappings": {
+    "form_controls": {
+      "text_input": "TextField (Material-UI)",
+      "textarea": "TextField multiline",
+      "select": "Select (Material-UI)",
+      "checkbox": "Checkbox (Material-UI)",
+      "radio": "RadioGroup (Material-UI)",
+      "date_picker": "DatePicker (@mui/x-date-pickers)",
+      "autocomplete": "Autocomplete (Material-UI)"
+    },
+    "data_display": {
+      "table": "DataGrid (@mui/x-data-grid)",
+      "list": "List (Material-UI)",
+      "tree": "TreeView (@mui/x-tree-view)",
+      "charts": "Recharts",
+      "cards": "Card (Material-UI)"
+    },
+    "navigation": {
+      "pagination": "Pagination (Material-UI)",
+      "tabs": "Tabs (Material-UI)",
+      "breadcrumb": "Breadcrumbs (Material-UI)",
+      "menu": "Menu (Material-UI)",
+      "drawer": "Drawer (Material-UI)"
+    },
+    "feedback": {
+      "alert": "Alert (Material-UI)",
+      "snackbar": "Snackbar (Material-UI)",
+      "modal": "Modal (Material-UI)",
+      "loading": "CircularProgress (Material-UI)",
+      "progress": "LinearProgress (Material-UI)"
+    },
+    "layout": {
+      "container": "Container (Material-UI)",
+      "grid": "Grid (Material-UI)",
+      "paper": "Paper (Material-UI)",
+      "app_bar": "AppBar (Material-UI)"
+    }
+  },
+  "api_patterns": {
+    "rest_endpoints": {
+      "list": "GET /api/{resource}?page={page}&limit={limit}&sort={field}&filter={criteria}",
+      "detail": "GET /api/{resource}/{id}",
+      "create": "POST /api/{resource}",
+      "update": "PUT /api/{resource}/{id}",
+      "patch": "PATCH /api/{resource}/{id}",
+      "delete": "DELETE /api/{resource}/{id}",
+      "search": "GET /api/{resource}/search?q={query}"
+    },
+    "response_format": {
+      "success": {
+        "structure": "{ success: true, data: {}, message?: '' }",
+        "pagination": "{ data: [], pagination: { page: 1, limit: 10, total: 100, totalPages: 10 } }"
+      },
+      "error": {
+        "structure": "{ success: false, error: { code: '', message: '', stack?: '' } }",
+        "validation": "{ success: false, errors: [{ field: '', message: '' }] }"
+      }
+    },
+    "status_codes": {
+      "200": "OK (GET, PUT, PATCH)",
+      "201": "Created (POST)",
+      "204": "No Content (DELETE)",
+      "400": "Bad Request",
+      "401": "Unauthorized",
+      "403": "Forbidden",
+      "404": "Not Found",
+      "422": "Unprocessable Entity (Validation Error)",
+      "500": "Internal Server Error"
+    }
+  }
+}

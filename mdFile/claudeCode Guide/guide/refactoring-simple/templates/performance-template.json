@@ -1,0 +1,235 @@
+{
+  "description": "성능 분석 데이터 수집 템플릿",
+  "version": "1.0",
+  "performance": {
+    "api": {
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/v1/example",
+          "description": null,
+          "before": {
+            "avgResponseTime": null,
+            "maxResponseTime": null,
+            "minResponseTime": null,
+            "p95ResponseTime": null,
+            "p99ResponseTime": null
+          },
+          "after": {
+            "avgResponseTime": null,
+            "maxResponseTime": null,
+            "minResponseTime": null,
+            "p95ResponseTime": null,
+            "p99ResponseTime": null
+          },
+          "improvement": null
+        }
+      ],
+      "overall": {
+        "before": {
+          "avgResponseTime": null,
+          "throughput": null,
+          "errorRate": null
+        },
+        "after": {
+          "avgResponseTime": null,
+          "throughput": null,
+          "errorRate": null
+        }
+      }
+    },
+    "database": {
+      "queries": [
+        {
+          "id": null,
+          "description": null,
+          "type": "SELECT",
+          "before": {
+            "executionTime": null,
+            "rowsExamined": null,
+            "rowsReturned": null,
+            "indexUsed": false
+          },
+          "after": {
+            "executionTime": null,
+            "rowsExamined": null,
+            "rowsReturned": null,
+            "indexUsed": false
+          },
+          "optimization": null
+        }
+      ],
+      "issues": {
+        "nPlusOne": {
+          "before": [],
+          "after": [],
+          "resolved": []
+        },
+        "slowQueries": {
+          "before": [],
+          "after": [],
+          "optimized": []
+        },
+        "missingIndexes": {
+          "before": [],
+          "after": [],
+          "added": []
+        }
+      },
+      "connectionPool": {
+        "before": {
+          "size": null,
+          "activeConnections": null,
+          "idleConnections": null,
+          "waitTime": null
+        },
+        "after": {
+          "size": null,
+          "activeConnections": null,
+          "idleConnections": null,
+          "waitTime": null
+        }
+      }
+    },
+    "caching": {
+      "implementation": {
+        "before": {
+          "enabled": false,
+          "type": null,
+          "provider": null
+        },
+        "after": {
+          "enabled": false,
+          "type": null,
+          "provider": null
+        }
+      },
+      "metrics": {
+        "hitRate": {
+          "before": null,
+          "after": null
+        },
+        "missRate": {
+          "before": null,
+          "after": null
+        },
+        "evictionRate": {
+          "before": null,
+          "after": null
+        },
+        "coverage": {
+          "before": null,
+          "after": null
+        }
+      },
+      "cachedEndpoints": [],
+      "cachedQueries": []
+    },
+    "memory": {
+      "before": {
+        "heapUsage": {
+          "initial": null,
+          "used": null,
+          "committed": null,
+          "max": null
+        },
+        "gcMetrics": {
+          "frequency": null,
+          "avgPauseTime": null,
+          "totalPauseTime": null
+        }
+      },
+      "after": {
+        "heapUsage": {
+          "initial": null,
+          "used": null,
+          "committed": null,
+          "max": null
+        },
+        "gcMetrics": {
+          "frequency": null,
+          "avgPauseTime": null,
+          "totalPauseTime": null
+        }
+      }
+    },
+    "concurrency": {
+      "before": {
+        "threadPoolSize": null,
+        "activeThreads": null,
+        "queuedTasks": null,
+        "rejectedTasks": null
+      },
+      "after": {
+        "threadPoolSize": null,
+        "activeThreads": null,
+        "queuedTasks": null,
+        "rejectedTasks": null,
+        "virtualThreadsEnabled": false
+      }
+    },
+    "bottlenecks": {
+      "identified": [
+        {
+          "location": null,
+          "type": null,
+          "impact": null,
+          "description": null
+        }
+      ],
+      "resolved": [
+        {
+          "location": null,
+          "type": null,
+          "solution": null,
+          "improvement": null
+        }
+      ]
+    },
+    "loadTest": {
+      "scenarios": [
+        {
+          "name": null,
+          "users": null,
+          "duration": null,
+          "before": {
+            "successRate": null,
+            "avgResponseTime": null,
+            "throughput": null,
+            "errors": null
+          },
+          "after": {
+            "successRate": null,
+            "avgResponseTime": null,
+            "throughput": null,
+            "errors": null
+          }
+        }
+      ]
+    }
+  },
+  "optimizations": {
+    "applied": [
+      {
+        "type": null,
+        "description": null,
+        "impact": null,
+        "effort": null
+      }
+    ],
+    "recommendations": [
+      {
+        "priority": null,
+        "type": null,
+        "description": null,
+        "expectedImpact": null,
+        "effort": null
+      }
+    ]
+  },
+  "summary": {
+    "overallImprovement": null,
+    "keyAchievements": [],
+    "remainingConcerns": []
+  }
+}

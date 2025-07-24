@@ -1,0 +1,101 @@
+// 스키마 관련 쿼리
+export const SCHEMA_QUERIES = {
+  LIST_SCHEMAS: `
+    SELECT 
+      SCHEMA_NAME as schemaName,
+      DEFAULT_CHARACTER_SET_NAME as defaultCharacterSet,
+      DEFAULT_COLLATION_NAME as defaultCollation
+    FROM information_schema.SCHEMATA
+    WHERE SCHEMA_NAME NOT IN ('information_schema', 'performance_schema', 'mysql', 'sys')
+    ORDER BY SCHEMA_NAME
+  `,
+  
+  LIST_TABLES: `
+    SELECT 
+      TABLE_NAME as tableName,
+      TABLE_SCHEMA as tableSchema,
+      TABLE_TYPE as tableType,
+      ENGINE as engine,
+      ROW_FORMAT as rowFormat,
+      TABLE_ROWS as tableRows,
+      AVG_ROW_LENGTH as avgRowLength,
+      DATA_LENGTH as dataLength,
+      INDEX_LENGTH as indexLength,
+      CREATE_TIME as createTime,
+      UPDATE_TIME as updateTime,
+      TABLE_COMMENT as tableComment
+    FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = ?
+    ORDER BY TABLE_NAME
+  `,
+};
+
+// 테이블 정보 관련 쿼리
+export const TABLE_QUERIES = {
+  GET_COLUMNS: `
+    SELECT 
+      COLUMN_NAME as columnName,
+      ORDINAL_POSITION as ordinalPosition,
+      COLUMN_DEFAULT as columnDefault,
+      IS_NULLABLE = 'YES' as isNullable,
+      DATA_TYPE as dataType,
+      COLUMN_TYPE as columnType,
+      CHARACTER_MAXIMUM_LENGTH as characterMaximumLength,
+      NUMERIC_PRECISION as numericPrecision,
+      NUMERIC_SCALE as numericScale,
+      COLUMN_KEY as columnKey,
+      EXTRA as extra,
+      COLUMN_COMMENT as columnComment
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+    ORDER BY ORDINAL_POSITION
+  `,
+  
+  GET_INDEXES: `
+    SELECT 
+      INDEX_NAME as indexName,
+      NON_UNIQUE as nonUnique,
+      COLUMN_NAME as columnName,
+      SEQ_IN_INDEX as seqInIndex,
+      CARDINALITY as cardinality,
+      NULLABLE = 'YES' as nullable,
+      INDEX_TYPE as indexType,
+      COMMENT as comment
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+    ORDER BY INDEX_NAME, SEQ_IN_INDEX
+  `,
+  
+  GET_TABLE_STATS: `
+    SELECT 
+      TABLE_NAME as tableName,
+      TABLE_ROWS as tableRows,
+      DATA_LENGTH as dataLength,
+      INDEX_LENGTH as indexLength,
+      DATA_FREE as dataFree,
+      AVG_ROW_LENGTH as avgRowLength,
+      CREATE_TIME as createTime,
+      UPDATE_TIME as updateTime
+    FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+  `,
+};
+
+// DDL 관련 쿼리
+export const DDL_QUERIES = {
+  SHOW_CREATE_TABLE: `SHOW CREATE TABLE ??.??`,
+};
+
+// 성능 통계 관련 쿼리
+export const STATS_QUERIES = {
+  GET_PERFORMANCE_STATS: `
+    SELECT 
+      (SELECT COUNT(*) FROM information_schema.PROCESSLIST) as totalConnections,
+      (SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE COMMAND != 'Sleep') as activeConnections,
+      (SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME = 'Questions') as totalQueries,
+      (SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME = 'Slow_queries') as slowQueries,
+      (SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME = 'Uptime') as uptime,
+      (SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME = 'Bytes_received') as bytesReceived,
+      (SELECT VARIABLE_VALUE FROM information_schema.GLOBAL_STATUS WHERE VARIABLE_NAME = 'Bytes_sent') as bytesSent
+  `,
+};
