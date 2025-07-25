@@ -1,10 +1,68 @@
 import moment from 'moment-timezone';
-import { extractBlNumber, extractUpsBlNumbers } from '../utils/blExtractor';
+import { extractBlNumber, extractUpsShipmentInfo } from '../utils/blExtractor';
+import { extractCustomsTimes } from '../utils/unipassParser';
+import https from 'https';
+
+// SSL 검증을 우회하는 custom agent
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
+
+// Unipass API 호출 함수
+async function fetchUnipassData(blNumber: string, blYear: string) {
+  if (!blNumber || blNumber === 'N/A') {
+    console.log('Skipping invalid BL number:', blNumber);
+    return null;
+  }
+  
+  try {
+    const apiUrl = `https://unipass.customs.go.kr:38010/ext/rest/cargCsclPrgsInfoQry/retrieveCargCsclPrgsInfo`;
+    const params = new URLSearchParams({
+      crkyCn: 'u200k223c072x041e040i000b0',
+      blYy: blYear,
+      hblNo: blNumber
+    });
+    
+    const fullUrl = `${apiUrl}?${params}`;
+    console.log('Making Unipass API request to:', fullUrl);
+    
+    // ofetch를 사용하여 SSL 검증 우회
+    const response = await $fetch(fullUrl, {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      // @ts-ignore
+      agent: httpsAgent,
+      timeout: 15000
+    });
+    
+    console.log('Unipass API response received:', response);
+    
+    // 통관 시간 정보 추출
+    const customsTimes = await extractCustomsTimes(response);
+    
+    return {
+      originalData: response,
+      customsTimes
+    };
+  } catch (error) {
+    console.error(`Unipass API error for BL ${blNumber} (Year: ${blYear}):`, error);
+    console.error('Error details:', {
+      message: (error as any)?.message,
+      statusCode: (error as any)?.statusCode,
+      statusMessage: (error as any)?.statusMessage,
+      data: (error as any)?.data
+    });
+    return null;
+  }
+}
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const startDate = query.startDate as string;
   const endDate = query.endDate as string;
+  const blYear = query.blYear as string || new Date().getFullYear().toString();
   
   const accessToken = getCookie(event, 'access_token');
   
@@ -118,33 +176,39 @@ export default defineEventHandler(async (event) => {
       // 한국 시간으로 변환
       const date = moment(dateHeader).tz('Asia/Seoul');
 
-      // UPS 메일 처리 (여러 BL 번호 가능)
+      // UPS 메일 처리 (여러 BL 번호와 Tracking 번호 가능)
       if (sender.toLowerCase().includes('ups') && subject.includes('[Pre-Alert]')) {
-        const upsBlNumbers = extractUpsBlNumbers(body, subject);
+        const upsShipments = extractUpsShipmentInfo(body, subject);
         
-        if (upsBlNumbers.length > 0) {
-          // 각 BL 번호마다 별도의 row 생성
-          for (const blNumber of upsBlNumbers) {
+        if (upsShipments.length > 0) {
+          // 각 shipment마다 별도의 row 생성
+          for (const shipment of upsShipments) {
             emailDetails.push({
               id: message.id,
               subject,
               body,
-              blNumber,
+              blNumber: shipment.blNumber,
+              trackingNumber: shipment.trackingNumber || 'N/A',
               date: date.format('YYYYMMDD'),
               time: date.format('HH:mm'),
-              sender
+              sender,
+              acceptanceTime: '',
+              clearanceTime: ''
             });
           }
         } else {
-          // BL 번호가 없는 경우에도 하나의 row 생성
+          // shipment 정보가 없는 경우에도 하나의 row 생성
           emailDetails.push({
             id: message.id,
             subject,
             body,
             blNumber: 'N/A',
+            trackingNumber: 'N/A',
             date: date.format('YYYYMMDD'),
             time: date.format('HH:mm'),
-            sender
+            sender,
+            acceptanceTime: '',
+            clearanceTime: ''
           });
         }
       } else {
@@ -156,21 +220,68 @@ export default defineEventHandler(async (event) => {
           subject,
           body,
           blNumber,
+          trackingNumber: 'N/A',
           date: date.format('YYYYMMDD'),
           time: date.format('HH:mm'),
-          sender
+          sender,
+          acceptanceTime: '',
+          clearanceTime: ''
         });
       }
     }
     
-    // 날짜 기준 정렬 (최신순)
+    // 제목별로 그룹화한 후 날짜 기준 정렬
     emailDetails.sort((a, b) => {
+      // 먼저 제목으로 정렬
+      if (a.subject !== b.subject) {
+        return a.subject.localeCompare(b.subject);
+      }
+      // 같은 제목이면 날짜 기준 정렬 (최신순)
       const dateA = parseInt(a.date + a.time.replace(':', ''));
       const dateB = parseInt(b.date + b.time.replace(':', ''));
       return dateB - dateA;
     });
     
-    return emailDetails;
+    // 각 BL 번호에 대해 Unipass 데이터 조회
+    const uniqueBLNumbers = [...new Set(emailDetails.map(e => e.blNumber).filter(bl => bl && bl !== 'N/A'))];
+    console.log('Unique BL Numbers to query:', uniqueBLNumbers);
+    console.log('BL Year:', blYear);
+    
+    const unipassDataMap: Record<string, any> = {};
+    
+    // 병렬로 Unipass 데이터 조회 (에러가 발생해도 다른 요청은 계속 진행)
+    const unipassPromises = uniqueBLNumbers.map(async (blNumber) => {
+      try {
+        console.log(`Fetching Unipass data for BL: ${blNumber}, Year: ${blYear}`);
+        const data = await fetchUnipassData(blNumber, blYear);
+        if (data) {
+          console.log(`Unipass data received for BL ${blNumber}:`, data);
+          unipassDataMap[blNumber] = data;
+        } else {
+          console.log(`No Unipass data for BL ${blNumber}`);
+        }
+      } catch (error) {
+        console.error(`Failed to fetch Unipass data for BL ${blNumber}:`, error);
+      }
+    });
+    
+    await Promise.allSettled(unipassPromises);
+    console.log('Unipass data map:', unipassDataMap);
+    
+    // 이메일 상세 정보에 Unipass 데이터 및 통관 시간 추가
+    const emailsWithUnipass = emailDetails.map(email => {
+      const unipassData = email.blNumber && email.blNumber !== 'N/A' ? unipassDataMap[email.blNumber] || null : null;
+      const customsTimes = unipassData?.customsTimes || {};
+      
+      return {
+        ...email,
+        unipassData,
+        acceptanceTime: customsTimes.acceptanceTime || '',
+        clearanceTime: customsTimes.clearanceTime || ''
+      };
+    });
+    
+    return emailsWithUnipass;
   } catch (error: any) {
     console.error('Email fetch error:', error);
     

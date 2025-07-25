@@ -22,23 +22,6 @@
       
       <!-- 로그인 상태일 때 -->
       <div v-else class="max-w-4xl mx-auto">
-        <!-- 페이지 네비게이션 -->
-        <div class="bg-white rounded-lg shadow p-4 mb-6">
-          <div class="flex space-x-4">
-            <nuxt-link 
-              to="/"
-              class="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              이메일 내보내기
-            </nuxt-link>
-            <nuxt-link 
-              to="/bl-management"
-              class="text-blue-600 hover:text-blue-700 font-medium"
-            >
-              BL 번호 관리
-            </nuxt-link>
-          </div>
-        </div>
         
         <div class="bg-white rounded-lg shadow p-6 mb-6">
           <div class="flex justify-between items-center mb-6">
@@ -54,8 +37,8 @@
             </button>
           </div>
           
-          <!-- 날짜 선택 -->
-          <div class="grid grid-cols-2 gap-4 mb-6">
+          <!-- 날짜 및 BL 년도 선택 -->
+          <div class="grid grid-cols-3 gap-4 mb-6">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">시작일시</label>
               <input
@@ -72,15 +55,32 @@
                 class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">BL 년도</label>
+              <input
+                v-model="blYear"
+                type="number"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
           
-          <button
-            @click="fetchEmails"
-            :disabled="loading || !startDate || !endDate"
-            class="w-full bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-md"
-          >
-            {{ loading ? '조회 중...' : '메일 조회' }}
-          </button>
+          <div class="flex gap-2">
+            <button
+              @click="fetchEmails"
+              :disabled="loading || !startDate || !endDate"
+              class="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-md"
+            >
+              {{ loading ? '조회 중...' : '메일 조회' }}
+            </button>
+            <button
+              @click="testUnipass"
+              :disabled="unipassTesting"
+              class="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-md"
+            >
+              {{ unipassTesting ? '테스트 중...' : 'Unipass 테스트' }}
+            </button>
+          </div>
         </div>
         
         <!-- 메일 목록 -->
@@ -102,18 +102,40 @@
             <table class="w-full">
               <thead class="bg-gray-50">
                 <tr>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">B/L 번호</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">제목</th>
-                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">본문 (앞 50자)</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">B/L 번호</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tracking 번호</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">통관접수시간</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">수리시간</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">날짜</th>
                   <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">시간</th>
                 </tr>
               </thead>
-              <tbody class="divide-y divide-gray-200">
-                <tr v-for="email in displayEmails" :key="email.id">
-                  <td class="px-6 py-4 text-sm text-gray-900">{{ email.blNumber }}</td>
-                  <td class="px-6 py-4 text-sm text-gray-900">{{ email.subject }}</td>
-                  <td class="px-6 py-4 text-sm text-gray-500">{{ email.body.substring(0, 50) }}</td>
+              <tbody>
+                <tr v-for="(email, index) in emailsWithRowspan" :key="`${email.id}-${index}`" class="border-b">
+                  <td 
+                    v-if="email.showSubject"
+                    :rowspan="email.rowspan"
+                    class="px-6 py-4 text-sm text-gray-900 align-middle border-r bg-gray-50"
+                  >
+                    {{ email.subject }}
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-900">
+                    <div class="flex items-center gap-2">
+                      <button 
+                        v-if="email.blNumber !== 'N/A'"
+                        @click="showUnipassData(email)"
+                        class="text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                      >
+                        {{ email.blNumber }}
+                      </button>
+                      <span v-else>{{ email.blNumber }}</span>
+                      <span v-if="email.unipassData" class="text-green-600 text-xs">●</span>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-900">{{ email.trackingNumber || 'N/A' }}</td>
+                  <td class="px-6 py-4 text-sm text-gray-600">{{ email.acceptanceTime || '-' }}</td>
+                  <td class="px-6 py-4 text-sm text-gray-600">{{ email.clearanceTime || '-' }}</td>
                   <td class="px-6 py-4 text-sm text-gray-500">{{ email.date }}</td>
                   <td class="px-6 py-4 text-sm text-gray-500">{{ email.time }}</td>
                 </tr>
@@ -138,6 +160,43 @@
         </div>
       </div>
     </div>
+    
+    <!-- Unipass 데이터 팝업 -->
+    <div
+      v-if="showUnipassModal"
+      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+      @click="closeUnipassModal"
+    >
+      <div
+        class="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white"
+        @click.stop
+      >
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-bold">BL 번호: {{ selectedBL }}</h3>
+          <button
+            @click="closeUnipassModal"
+            class="text-gray-400 hover:text-gray-600"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <div v-if="unipassLoading" class="text-center py-8">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <p class="mt-2">데이터 조회 중...</p>
+        </div>
+        
+        <div v-else-if="unipassError" class="text-red-600 p-4">
+          오류: {{ unipassError }}
+        </div>
+        
+        <div v-else-if="unipassData" class="overflow-auto max-h-96 p-4 bg-gray-50 rounded">
+          <pre class="text-xs">{{ JSON.stringify(unipassData, null, 2) }}</pre>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -149,8 +208,12 @@ interface Email {
   subject: string;
   body: string;
   blNumber: string;
+  trackingNumber?: string;
   date: string;
   time: string;
+  unipassData?: any;
+  acceptanceTime?: string;
+  clearanceTime?: string;
 }
 
 const isAuthenticated = ref(false);
@@ -158,12 +221,53 @@ const userEmail = ref('');
 const emails = ref<Email[]>([]);
 const startDate = ref('');
 const endDate = ref('');
+const blYear = ref(new Date().getFullYear().toString());
 const loading = ref(false);
 const downloading = ref(false);
 const error = ref('');
+const unipassTesting = ref(false);
+const unipassTestResult = ref<any>(null);
 const displayCount = ref(50);
 
 const displayEmails = computed(() => emails.value.slice(0, displayCount.value));
+
+// 제목 병합을 위한 계산된 속성
+const emailsWithRowspan = computed(() => {
+  const result: any[] = [];
+  const slicedEmails = displayEmails.value;
+  
+  let i = 0;
+  while (i < slicedEmails.length) {
+    const currentEmail = slicedEmails[i];
+    let rowspan = 1;
+    
+    // 같은 제목이 연속으로 나오는 개수 계산
+    while (i + rowspan < slicedEmails.length && 
+           slicedEmails[i + rowspan].subject === currentEmail.subject) {
+      rowspan++;
+    }
+    
+    // 첫 번째 행에는 rowspan 정보 추가
+    result.push({
+      ...currentEmail,
+      rowspan,
+      showSubject: true
+    });
+    
+    // 나머지 행들은 제목 표시 안 함
+    for (let j = 1; j < rowspan; j++) {
+      result.push({
+        ...slicedEmails[i + j],
+        rowspan: 0,
+        showSubject: false
+      });
+    }
+    
+    i += rowspan;
+  }
+  
+  return result;
+});
 
 // 사용자 정보 확인
 const checkAuth = async () => {
@@ -206,7 +310,8 @@ const fetchEmails = async () => {
     const data = await $fetch('/api/emails', {
       params: {
         startDate: new Date(startDate.value).toISOString(),
-        endDate: new Date(endDate.value).toISOString()
+        endDate: new Date(endDate.value).toISOString(),
+        blYear: blYear.value
       }
     });
     
@@ -258,6 +363,59 @@ const downloadExcel = async () => {
 // 더 보기
 const showMore = () => {
   displayCount.value += 50;
+};
+
+// Unipass 테스트
+const testUnipass = async () => {
+  unipassTesting.value = true;
+  error.value = '';
+  
+  try {
+    const data = await $fetch('/api/test-unipass', {
+      params: {
+        bl: '1681295055',
+        year: blYear.value
+      }
+    });
+    
+    unipassTestResult.value = data;
+    console.log('Unipass 테스트 결과:', data);
+    
+    if (data.success) {
+      console.log('✅ Unipass API 테스트 성공!', data);
+      error.value = `✅ 테스트 성공! 통관접수시간: ${data.customsTimes?.acceptanceTime || '없음'}, 수리시간: ${data.customsTimes?.clearanceTime || '없음'}`;
+    } else {
+      console.log('❌ Unipass API 테스트 실패:', data);
+      error.value = `❌ 테스트 실패: ${data.error?.message || 'Unknown error'}`;
+    }
+  } catch (err: any) {
+    console.error('Unipass 테스트 오류:', err);
+    error.value = `Unipass 테스트 오류: ${err.data?.statusMessage || err.message}`;
+    alert(`❌ Unipass 테스트 오류:\n${err.data?.statusMessage || err.message}`);
+  } finally {
+    unipassTesting.value = false;
+  }
+};
+
+// Unipass 팝업 관련
+const showUnipassModal = ref(false);
+const selectedBL = ref('');
+const unipassData = ref<any>(null);
+const unipassLoading = ref(false);
+const unipassError = ref('');
+
+const showUnipassData = (email: Email) => {
+  selectedBL.value = email.blNumber;
+  unipassData.value = email.unipassData;
+  showUnipassModal.value = true;
+  unipassLoading.value = false;
+  unipassError.value = '';
+};
+
+const closeUnipassModal = () => {
+  showUnipassModal.value = false;
+  selectedBL.value = '';
+  unipassData.value = null;
 };
 
 // 기본 날짜 설정 (어제 하루)
