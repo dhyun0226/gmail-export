@@ -1,7 +1,6 @@
 <template>
   <div class="min-h-screen bg-gray-50">
-    <!-- 공통 네비게이션 (로그인 상태이거나 테스트 페이지일 때 표시) -->
-    <div v-if="isAuthenticated || $route.path === '/bl-test'" class="bg-white shadow mb-6">
+    <!-- <div v-if="isAuthenticated || $route.path === '/bl-test'" class="bg-white shadow mb-6">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex space-x-8 h-16 items-center">
           <nuxt-link 
@@ -11,23 +10,9 @@
           >
             이메일 내보내기
           </nuxt-link>
-          <nuxt-link 
-            to="/bl-management"
-            class="text-gray-900 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm"
-            :class="{ 'bg-blue-50 text-blue-700': $route.path === '/bl-management' }"
-          >
-            BL 번호 관리
-          </nuxt-link>
-          <nuxt-link 
-            to="/bl-test"
-            class="text-gray-900 hover:text-blue-600 font-medium px-3 py-2 rounded-md text-sm"
-            :class="{ 'bg-blue-50 text-blue-700': $route.path === '/bl-test' }"
-          >
-            BL 추출 테스트
-          </nuxt-link>
         </div>
       </div>
-    </div>
+    </div> -->
     
     <!-- 페이지 콘텐츠 -->
     <slot />

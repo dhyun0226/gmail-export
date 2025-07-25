@@ -41,7 +41,7 @@
           </div>
           
           <!-- 날짜 및 BL 년도 선택 -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div>
               <label class="block text-sm font-medium text-text-light mb-2">시작일시</label>
               <input
@@ -58,7 +58,16 @@
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-light transition duration-200 text-text-DEFAULT"
               />
             </div>
+            <div>
+              <label class="block text-sm font-medium text-text-light mb-2">BL 년도</label>
+              <input
+                v-model="blYear"
+                type="number"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-light transition duration-200 text-text-DEFAULT"
+              />
+            </div>
           </div>
+          
           <div class="flex gap-4">
             <button
               @click="fetchEmails"
@@ -91,6 +100,8 @@
                   <th class="px-6 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">제목</th>
                   <th class="px-6 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">B/L 번호</th>
                   <th class="px-6 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">Tracking 번호</th>
+                  <th class="px-6 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">통관접수시간</th>
+                  <th class="px-6 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">수리시간</th>
                   <th class="px-6 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">메일 수신날짜</th>
                   <th class="px-6 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">메일 수신 시간</th>
                 </tr>
@@ -107,9 +118,12 @@
                   <td class="px-6 py-4 text-sm text-text-DEFAULT">
                     <div class="flex items-center gap-2">
                       <span class="text-text-light">{{ email.blNumber }}</span>
+                      <span v-if="email.unipassData" class="text-accent-DEFAULT text-xs">●</span>
                     </div>
                   </td>
                   <td class="px-6 py-4 text-sm text-text-DEFAULT">{{ email.trackingNumber || 'N/A' }}</td>
+                  <td class="px-6 py-4 text-sm text-text-light">{{ email.acceptanceTime || '-' }}</td>
+                  <td class="px-6 py-4 text-sm text-text-light">{{ email.clearanceTime || '-' }}</td>
                   <td class="px-6 py-4 text-sm text-text-light">{{ email.date }}</td>
                   <td class="px-6 py-4 text-sm text-text-light">{{ email.time }}</td>
                 </tr>
@@ -310,8 +324,41 @@ const showMore = () => {
   displayCount.value += 50;
 };
 
-const unipassData = ref<any>(null);
 
+// Unipass 팝업 관련
+const showUnipassModal = ref(false);
+const selectedBL = ref('');
+const unipassData = ref<any>(null);
+const unipassLoading = ref(false);
+const unipassError = ref('');
+
+const parsedXml = ref<Document | null>(null);
+
+declare const Prism: any;
+
+const showUnipassData = async (email: Email) => {
+  selectedBL.value = email.blNumber;
+  unipassData.value = email.unipassData;
+  showUnipassModal.value = true;
+  unipassLoading.value = false;
+  unipassError.value = '';
+
+  if (unipassData.value && unipassData.value.originalData) {
+    const parser = new DOMParser();
+    parsedXml.value = parser.parseFromString(unipassData.value.originalData, "application/xml");
+  }
+
+  await nextTick();
+  if (typeof Prism !== 'undefined') {
+    Prism.highlightAll();
+  }
+};
+
+const closeUnipassModal = () => {
+  showUnipassModal.value = false;
+  selectedBL.value = '';
+  unipassData.value = null;
+};
 
 // 기본 날짜 설정 (어제 하루)
 const setDefaultDates = () => {
