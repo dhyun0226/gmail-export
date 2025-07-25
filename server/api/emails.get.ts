@@ -1,14 +1,47 @@
 import moment from 'moment-timezone';
 import { extractBlNumber, extractUpsShipmentInfo } from '../utils/blExtractor';
-import { extractCustomsTimes } from '../utils/unipassParser';
+// import { extractCustomsTimes } from '../utils/unipassParser';
 import https from 'https';
 
-// SSL 검증을 우회하는 custom agent
-const httpsAgent = new https.Agent({
-  rejectUnauthorized: false
-});
+// SSL 검증은 httpsRequest 함수 내부에서 처리
 
-// Unipass API 호출 함수
+// Node.js https 모듈을 사용한 요청 함수
+function httpsRequest(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    console.log('Making HTTPS request to:', url);
+    
+    const req = https.get(url, {
+      rejectUnauthorized: false,  // ✅ SSL 검증 우회
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': '*/*'
+      }
+    }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      
+      res.on('end', () => {
+        console.log('Response received, length:', data.length);
+        resolve(data);
+      });
+    });
+    
+    req.on('error', (error) => {
+      console.error('HTTPS request error:', error);
+      reject(error);
+    });
+    
+    req.setTimeout(15000, () => {
+      console.error('Request timeout');
+      req.destroy();
+      reject(new Error('Request timeout'));
+    });
+  });
+}
+
+// Unipass API 호출 함수 (Node.js https 사용)
 async function fetchUnipassData(blNumber: string, blYear: string) {
   if (!blNumber || blNumber === 'N/A') {
     console.log('Skipping invalid BL number:', blNumber);
@@ -26,21 +59,35 @@ async function fetchUnipassData(blNumber: string, blYear: string) {
     const fullUrl = `${apiUrl}?${params}`;
     console.log('Making Unipass API request to:', fullUrl);
     
-    // ofetch를 사용하여 SSL 검증 우회
-    const response = await $fetch(fullUrl, {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      },
-      // @ts-ignore
-      agent: httpsAgent,
-      timeout: 15000
-    });
+    // ✅ Node.js https 모듈 사용 (테스트에서 성공한 방식)
+    const response = await httpsRequest(fullUrl);
     
-    console.log('Unipass API response received:', response);
+    console.log('Unipass API response received, length:', response.length);
     
-    // 통관 시간 정보 추출
-    const customsTimes = await extractCustomsTimes(response);
+    // 간단한 정규식으로 통관 시간 추출
+    let acceptanceTime = '';
+    let clearanceTime = '';
+    
+    if (typeof response === 'string') {
+      // 수입신고 시간 찾기 (첫 번째 발견)
+      const acceptanceMatch = response.match(/<cargTrcnRelaBsopTpcd>수입신고<\/cargTrcnRelaBsopTpcd>[\s\S]*?<prcsDttm>(\d{14})<\/prcsDttm>/);
+      if (acceptanceMatch) {
+        const rawTime = acceptanceMatch[1];
+        acceptanceTime = `${rawTime.substring(0,4)}-${rawTime.substring(4,6)}-${rawTime.substring(6,8)} ${rawTime.substring(8,10)}:${rawTime.substring(10,12)}`;
+      }
+      
+      // 수입신고수리 시간 찾기
+      const clearanceMatch = response.match(/<cargTrcnRelaBsopTpcd>수입신고수리<\/cargTrcnRelaBsopTpcd>[\s\S]*?<prcsDttm>(\d{14})<\/prcsDttm>/);
+      if (clearanceMatch) {
+        const rawTime = clearanceMatch[1];
+        clearanceTime = `${rawTime.substring(0,4)}-${rawTime.substring(4,6)}-${rawTime.substring(6,8)} ${rawTime.substring(8,10)}:${rawTime.substring(10,12)}`;
+      }
+    }
+    
+    const customsTimes = {
+      acceptanceTime,
+      clearanceTime
+    };
     
     return {
       originalData: response,

@@ -74,11 +74,11 @@
               {{ loading ? '조회 중...' : '메일 조회' }}
             </button>
             <button
-              @click="testUnipass"
-              :disabled="unipassTesting"
-              class="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-md"
+              @click="debugXmlParsing"
+              :disabled="xmlDebugging"
+              class="bg-purple-500 hover:bg-purple-600 disabled:bg-gray-400 text-white font-medium py-2 px-4 rounded-md whitespace-nowrap"
             >
-              {{ unipassTesting ? '테스트 중...' : 'Unipass 테스트' }}
+              {{ xmlDebugging ? '분석 중...' : 'XML 정규식 확인' }}
             </button>
           </div>
         </div>
@@ -225,8 +225,7 @@ const blYear = ref(new Date().getFullYear().toString());
 const loading = ref(false);
 const downloading = ref(false);
 const error = ref('');
-const unipassTesting = ref(false);
-const unipassTestResult = ref<any>(null);
+const xmlDebugging = ref(false);
 const displayCount = ref(50);
 
 const displayEmails = computed(() => emails.value.slice(0, displayCount.value));
@@ -365,35 +364,79 @@ const showMore = () => {
   displayCount.value += 50;
 };
 
-// Unipass 테스트
-const testUnipass = async () => {
-  unipassTesting.value = true;
+// XML 정규식 분석
+const debugXmlParsing = async () => {
+  xmlDebugging.value = true;
   error.value = '';
   
   try {
-    const data = await $fetch('/api/test-unipass', {
+    console.log('🔍 XML 정규식 분석 시작...');
+    
+    const data = await $fetch('/api/debug-xml-parsing', {
       params: {
-        bl: '1681295055',
+        bl: '1681295055',  // 테스트용 BL번호
         year: blYear.value
       }
     });
     
-    unipassTestResult.value = data;
-    console.log('Unipass 테스트 결과:', data);
+    console.log('📊 XML 분석 결과:', data);
     
     if (data.success) {
-      console.log('✅ Unipass API 테스트 성공!', data);
-      error.value = `✅ 테스트 성공! 통관접수시간: ${data.customsTimes?.acceptanceTime || '없음'}, 수리시간: ${data.customsTimes?.clearanceTime || '없음'}`;
+      const { analysis } = data;
+      
+      console.group('🎯 XML 블록 분석');
+      console.log('전체 XML 길이:', analysis.totalXmlLength, '바이트');
+      console.log('전체 블록 수:', analysis.totalBlocks, '개');
+      console.log('모든 블록 타입들:', analysis.allBlockTypes);
+      console.log('수입신고 관련 블록들:', analysis.importDeclarationBlocks);
+      console.groupEnd();
+      
+      console.group('🔍 현재 정규식 결과');
+      console.log('통관접수시간 (수입신고):', analysis.currentRegexResults.acceptanceTime);
+      console.log('수리시간 (수입신고수리):', analysis.currentRegexResults.clearanceTime);
+      console.log('Raw 통관접수시간:', analysis.currentRegexResults.acceptanceRaw);
+      console.log('Raw 수리시간:', analysis.currentRegexResults.clearanceRaw);
+      console.groupEnd();
+      
+      console.group('📋 정규식 패턴 설명');
+      console.log('통관접수시간 패턴:', data.regexExplanation.acceptancePattern);
+      console.log('수리시간 패턴:', data.regexExplanation.clearancePattern);
+      console.log('설명:', data.regexExplanation.explanation);
+      console.groupEnd();
+      
+      console.log('📄 원본 XML 미리보기:', data.xmlPreview);
+      
+      // 사용자에게 보여줄 요약
+      const summaryMsg = `🔍 XML 정규식 분석 결과
+
+📊 전체 분석:
+- XML 크기: ${analysis.totalXmlLength.toLocaleString()}바이트
+- 블록 수: ${analysis.totalBlocks}개
+- 수입신고 관련: ${analysis.importDeclarationBlocks.length}개
+
+🎯 현재 정규식 결과:
+⏰ 통관접수시간 (수입신고): ${analysis.currentRegexResults.acceptanceTime || '❌ 없음'}
+🏢 수리시간 (수입신고수리): ${analysis.currentRegexResults.clearanceTime || '❌ 없음'}
+
+📋 모든 시간 데이터:
+${analysis.allBlockTypes.join('\n')}
+
+✅ 정상적으로 추출되고 있습니다!`;
+      
+      error.value = `✅ XML 분석 완료: 통관접수시간=${analysis.currentRegexResults.acceptanceTime || '없음'}, 수리시간=${analysis.currentRegexResults.clearanceTime || '없음'}`;
+      alert(summaryMsg);
+      
     } else {
-      console.log('❌ Unipass API 테스트 실패:', data);
-      error.value = `❌ 테스트 실패: ${data.error?.message || 'Unknown error'}`;
+      console.error('❌ XML 분석 실패:', data);
+      error.value = `❌ XML 분석 실패: ${data.error}`;
+      alert(`❌ XML 분석 실패:\n\n${data.error}`);
     }
   } catch (err: any) {
-    console.error('Unipass 테스트 오류:', err);
-    error.value = `Unipass 테스트 오류: ${err.data?.statusMessage || err.message}`;
-    alert(`❌ Unipass 테스트 오류:\n${err.data?.statusMessage || err.message}`);
+    console.error('🚨 XML 분석 요청 오류:', err);
+    error.value = `XML 분석 요청 오류: ${err.data?.statusMessage || err.message}`;
+    alert(`🚨 XML 분석 요청 오류:\n\n${err.data?.statusMessage || err.message}`);
   } finally {
-    unipassTesting.value = false;
+    xmlDebugging.value = false;
   }
 };
 
