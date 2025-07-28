@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   
   // 헤더 설정
   worksheet.columns = [
-    { header: 'B/L 번호', key: 'blNumber', width: 25 },
+    { header: '제목', key: 'subject', width: 50 },
     { header: '메일수신날짜', key: 'date', width: 15 },
     { header: '메일수신시간', key: 'time', width: 10 }
   ];
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
     
     // 첫 번째 행 추가
     worksheet.addRow({
-      blNumber: currentEmail.trackingNumber == 'N/A' ? currentEmail.blNumber : currentEmail.trackingNumber,
+         subject: currentEmail.subject,
       date: currentEmail.date,
       time: currentEmail.time
     });
@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
     for (let j = 1; j < rowCount; j++) {
       const email = emails[i + j];
       worksheet.addRow({
-        blNumber: email.trackingNumber == 'N/A' ? email.blNumber : email.trackingNumber,
+        subject: email.subject,
         date: email.date,
         time: email.time
       });

@@ -227,58 +227,16 @@ export default defineEventHandler(async (event) => {
       // 한국 시간으로 변환
       const date = moment(dateHeader).tz('Asia/Seoul');
 
-      // UPS 메일 처리 (여러 BL 번호와 Tracking 번호 가능)
-      if (sender.toLowerCase().includes('ups') && subject.includes('[Pre-Alert]')) {
-        const upsShipments = extractUpsShipmentInfo(body, subject);
-        
-        if (upsShipments.length > 0) {
-          // 각 shipment마다 별도의 row 생성
-          for (const shipment of upsShipments) {
-            emailDetails.push({
-              id: message.id,
-              subject,
-              body,
-              blNumber: shipment.blNumber,
-              trackingNumber: shipment.trackingNumber || 'N/A',
-              date: date.format('YYYYMMDD'),
-              time: date.format('HH:mm'),
-              sender,
-              acceptanceTime: '',
-              clearanceTime: ''
-            });
-          }
-        } else {
-          // shipment 정보가 없는 경우에도 하나의 row 생성
-          emailDetails.push({
-            id: message.id,
-            subject,
-            body,
-            blNumber: 'N/A',
-            trackingNumber: 'N/A',
-            date: date.format('YYYYMMDD'),
-            time: date.format('HH:mm'),
-            sender,
-            acceptanceTime: '',
-            clearanceTime: ''
-          });
-        }
-      } else {
         // 일반 메일 처리 (하나의 BL 번호)
         const blNumber = extractBlNumber(subject, sender);
         
         emailDetails.push({
           id: message.id,
           subject,
-          body,
-          blNumber,
-          trackingNumber: 'N/A',
           date: date.format('YYYYMMDD'),
           time: date.format('HH:mm'),
           sender,
-          acceptanceTime: '',
-          clearanceTime: ''
         });
-      }
     }
     
     
