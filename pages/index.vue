@@ -61,7 +61,8 @@
           </div>
 
           <!-- 날짜 및 BL 년도 선택 -->
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <!-- <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"> -->
             <div>
               <label class="block text-sm font-medium text-text-light mb-2"
                 >시작일시</label
@@ -82,7 +83,7 @@
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-light transition duration-200 text-text-DEFAULT"
               />
             </div>
-            <div>
+            <!-- <div>
               <label class="block text-sm font-medium text-text-light mb-2"
                 >BL 년도</label
               >
@@ -91,7 +92,7 @@
                 type="number"
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-light transition duration-200 text-text-DEFAULT"
               />
-            </div>
+            </div> -->
           </div>
 
           <div class="flex gap-4">
@@ -182,11 +183,11 @@
                   <td class="px-6 py-4 text-sm text-text-DEFAULT">
                     <div class="flex items-center gap-2">
                       <span class="text-text-light">{{ email.blNumber }}</span>
-                      <span
+                      <!-- <span
                         v-if="email.unipassData"
                         class="text-accent-DEFAULT text-xs"
                         >●</span
-                      >
+                      > -->
                     </div>
                   </td>
                   <td class="px-6 py-4 text-sm text-text-DEFAULT">
