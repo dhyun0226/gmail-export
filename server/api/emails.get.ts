@@ -164,26 +164,16 @@ export default defineEventHandler(async (event) => {
       const sender = headers.find(h => h.name === 'From')?.value || '';
 
       // 이메일 제목 필터링
-      const excludedKeywords = [
-        '순중량 정정요청',
-        '미결안내/용도설명서 요청',
-        'PENDING LIST',
-        '미반출 내역 안내의 건',
-        'Microsoft OneDrive 확인 코드',
-        '운송리스트 [TOP Customs]',
-        'check in Korea HTS',
-        'BOM 전달',
-        '가산금적용여부문의',
-        '이고요청',
-        '중량문의',
-        '통관 지연 사유 문의',
-        '수입신고필증 전달건',
-        '입항통보건 리스트 안내'
+      const keywordsToFilter = [
+        '순중량 정정요청', '미결안내/용도설명서 요청', 'PENDING LIST', 
+        '미반출 내역 안내의 건', 'Microsoft OneDrive 확인 코드', '운송리스트 [TOP Customs]',
+        'check in Korea HTS', 'BOM 전달', '가산금적용여부문의', '이고요청',
+        '중량문의', '통관 지연 사유 문의', '수입신고필증 전달건', '입항통보건 리스트 안내'
       ];
 
-      const shouldExclude = excludedKeywords.some(keyword => subject.includes(keyword));
-      if (shouldExclude) {
-        continue; // 다음 메일로 건너뛰기
+      const shouldBeFiltered = keywordsToFilter.some(keyword => subject.includes(keyword));
+      if (shouldBeFiltered) {
+        continue; // 이 이메일은 건너뜁니다.
       }
 
       // 본문 처리 - 중첩된 멀티파트 구조도 처리
@@ -250,16 +240,58 @@ export default defineEventHandler(async (event) => {
       // 한국 시간으로 변환
       const date = moment(dateHeader).tz('Asia/Seoul');
 
+      // UPS 메일 처리 (여러 BL 번호와 Tracking 번호 가능)
+      if (sender.toLowerCase().includes('ups') && subject.includes('[Pre-Alert]')) {
+        const upsShipments = extractUpsShipmentInfo(body, subject);
+        
+        if (upsShipments.length > 0) {
+          // 각 shipment마다 별도의 row 생성
+          for (const shipment of upsShipments) {
+            emailDetails.push({
+              id: message.id,
+              subject,
+              body,
+              blNumber: shipment.blNumber,
+              trackingNumber: shipment.trackingNumber || 'N/A',
+              date: date.format('YYYYMMDD'),
+              time: date.format('HH:mm'),
+              sender,
+              acceptanceTime: '',
+              clearanceTime: ''
+            });
+          }
+        } else {
+          // shipment 정보가 없는 경우에도 하나의 row 생성
+          emailDetails.push({
+            id: message.id,
+            subject,
+            body,
+            blNumber: 'N/A',
+            trackingNumber: 'N/A',
+            date: date.format('YYYYMMDD'),
+            time: date.format('HH:mm'),
+            sender,
+            acceptanceTime: '',
+            clearanceTime: ''
+          });
+        }
+      } else {
         // 일반 메일 처리 (하나의 BL 번호)
         const blNumber = extractBlNumber(subject, sender);
         
         emailDetails.push({
           id: message.id,
           subject,
+          body,
+          blNumber,
+          trackingNumber: 'N/A',
           date: date.format('YYYYMMDD'),
           time: date.format('HH:mm'),
           sender,
+          acceptanceTime: '',
+          clearanceTime: ''
         });
+      }
     }
     
     // 제목별로 그룹화한 후 날짜 기준 정렬
