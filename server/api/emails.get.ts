@@ -163,6 +163,29 @@ export default defineEventHandler(async (event) => {
       const dateHeader = headers.find(h => h.name === 'Date')?.value || '';
       const sender = headers.find(h => h.name === 'From')?.value || '';
 
+      // 이메일 제목 필터링
+      const excludedKeywords = [
+        '순중량 정정요청',
+        '미결안내/용도설명서 요청',
+        'PENDING LIST',
+        '미반출 내역 안내의 건',
+        'Microsoft OneDrive 확인 코드',
+        '운송리스트 [TOP Customs]',
+        'check in Korea HTS',
+        'BOM 전달',
+        '가산금적용여부문의',
+        '이고요청',
+        '중량문의',
+        '통관 지연 사유 문의',
+        '수입신고필증 전달건',
+        '입항통보건 리스트 안내'
+      ];
+
+      const shouldExclude = excludedKeywords.some(keyword => subject.includes(keyword));
+      if (shouldExclude) {
+        continue; // 다음 메일로 건너뛰기
+      }
+
       // 본문 처리 - 중첩된 멀티파트 구조도 처리
       const extractBody = (messagePart: any, depth: number = 0): string => {
         // 깊이 제한 (무한 재귀 방지)
@@ -239,17 +262,58 @@ export default defineEventHandler(async (event) => {
         });
     }
     
-    
     // 제목별로 그룹화한 후 날짜 기준 정렬
     emailDetails.sort((a, b) => {
+      // 먼저 제목으로 정렬
+      // if (a.subject !== b.subject) {
+      //   return a.subject.localeCompare(b.subject);
+      // }
       // 같은 제목이면 날짜 기준 정렬 (최신순)
       const dateA = parseInt(a.date + a.time.replace(':', ''));
       const dateB = parseInt(b.date + b.time.replace(':', ''));
       return dateB - dateA;
     });
     
+    // 각 BL 번호에 대해 Unipass 데이터 조회
+    const uniqueBLNumbers = [...new Set(emailDetails.map(e => e.blNumber).filter(bl => bl && bl !== 'N/A'))];
+    console.log('Unique BL Numbers to query:', uniqueBLNumbers);
+    console.log('BL Year:', blYear);
     
-    return emailDetails;
+    const unipassDataMap: Record<string, any> = {};
+    
+    // 병렬로 Unipass 데이터 조회 (에러가 발생해도 다른 요청은 계속 진행)
+    const unipassPromises = uniqueBLNumbers.map(async (blNumber) => {
+      try {
+        console.log(`Fetching Unipass data for BL: ${blNumber}, Year: ${blYear}`);
+        const data = await fetchUnipassData(blNumber, blYear);
+        if (data) {
+          console.log(`Unipass data received for BL ${blNumber}:`, data);
+          unipassDataMap[blNumber] = data;
+        } else {
+          console.log(`No Unipass data for BL ${blNumber}`);
+        }
+      } catch (error) {
+        console.error(`Failed to fetch Unipass data for BL ${blNumber}:`, error);
+      }
+    });
+    
+    await Promise.allSettled(unipassPromises);
+    console.log('Unipass data map:', unipassDataMap);
+    
+    // 이메일 상세 정보에 Unipass 데이터 및 통관 시간 추가
+    const emailsWithUnipass = emailDetails.map(email => {
+      const unipassData = email.blNumber && email.blNumber !== 'N/A' ? unipassDataMap[email.blNumber] || null : null;
+      const customsTimes = unipassData?.customsTimes || {};
+      
+      return {
+        ...email,
+        unipassData,
+        acceptanceTime: customsTimes.acceptanceTime || '',
+        clearanceTime: customsTimes.clearanceTime || ''
+      };
+    });
+    
+    return emailsWithUnipass;
   } catch (error: any) {
     console.error('Email fetch error:', error);
     

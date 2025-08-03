@@ -82,7 +82,9 @@
                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-light transition duration-200 text-text-DEFAULT"
               />
             </div>
+           
           </div>
+          
           <div class="flex gap-4">
             <button
               @click="fetchEmails"
@@ -361,8 +363,45 @@ const showMore = () => {
   displayCount.value += 50;
 };
 
-const unipassData = ref<any>(null);
 
+<<<<<<< HEAD
+=======
+// Unipass 팝업 관련
+const showUnipassModal = ref(false);
+const selectedBL = ref('');
+const unipassData = ref<any>(null);
+const unipassLoading = ref(false);
+const unipassError = ref('');
+
+const parsedXml = ref<Document | null>(null);
+
+declare const Prism: any;
+
+const showUnipassData = async (email: Email) => {
+  selectedBL.value = email.blNumber;
+  unipassData.value = email.unipassData;
+  showUnipassModal.value = true;
+  unipassLoading.value = false;
+  unipassError.value = '';
+
+  if (unipassData.value && unipassData.value.originalData) {
+    const parser = new DOMParser();
+    parsedXml.value = parser.parseFromString(unipassData.value.originalData, "application/xml");
+  }
+
+  await nextTick();
+  if (typeof Prism !== 'undefined') {
+    Prism.highlightAll();
+  }
+};
+
+const closeUnipassModal = () => {
+  showUnipassModal.value = false;
+  selectedBL.value = '';
+  unipassData.value = null;
+};
+
+>>>>>>> 36ff6f5 (v2 수정)
 // 기본 날짜 설정 (어제 하루)
 const setDefaultDates = () => {
   const yesterday = new Date();

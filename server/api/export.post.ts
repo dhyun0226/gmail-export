@@ -17,9 +17,17 @@ export default defineEventHandler(async (event) => {
   
   // 헤더 설정
   worksheet.columns = [
+<<<<<<< HEAD
     { header: '제목', key: 'subject', width: 50 },
     { header: '메일수신날짜', key: 'date', width: 15 },
     { header: '메일수신시간', key: 'time', width: 10 }
+=======
+    { header: '제목', key: 'subject', width: 100 },
+    { header: 'B/L 번호', key: 'blNumber', width: 25 },
+    { header: 'Tracking 번호', key: 'trackingNumber', width: 25 },
+    { header: '메일 수신날짜', key: 'date', width: 15 },
+    { header: '메일 수신 시간', key: 'time', width: 10 }
+>>>>>>> 36ff6f5 (v2 수정)
   ];
   
   // 헤더 스타일
@@ -46,7 +54,13 @@ export default defineEventHandler(async (event) => {
     
     // 첫 번째 행 추가
     worksheet.addRow({
+<<<<<<< HEAD
          subject: currentEmail.subject,
+=======
+      subject: currentEmail.subject,
+      blNumber: currentEmail.blNumber,
+      trackingNumber: currentEmail.trackingNumber || 'N/A',
+>>>>>>> 36ff6f5 (v2 수정)
       date: currentEmail.date,
       time: currentEmail.time
     });
@@ -55,10 +69,23 @@ export default defineEventHandler(async (event) => {
     for (let j = 1; j < rowCount; j++) {
       const email = emails[i + j];
       worksheet.addRow({
+<<<<<<< HEAD
         subject: email.subject,
+=======
+        subject: '', // 제목은 비워둠
+        blNumber: email.blNumber,
+        trackingNumber: email.trackingNumber || 'N/A',
+>>>>>>> 36ff6f5 (v2 수정)
         date: email.date,
         time: email.time
       });
+    }
+    
+    // 제목 셀 병합 (rowCount가 1보다 큰 경우만)
+    if (rowCount > 1) {
+      worksheet.mergeCells(`A${currentRow}:A${currentRow + rowCount - 1}`);
+      const mergedCell = worksheet.getCell(`A${currentRow}`);
+      mergedCell.alignment = { vertical: 'middle', horizontal: 'left' };
     }
     
     currentRow += rowCount;

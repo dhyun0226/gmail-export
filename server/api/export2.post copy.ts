@@ -17,8 +17,8 @@ export default defineEventHandler(async (event) => {
   
   // 헤더 설정
   worksheet.columns = [
-    { header: 'B/L 번호', key: 'blNumber', width: 25 },
     { header: '제목', key: 'subject', width: 50 },
+    { header: 'B/L 번호', key: 'blNumber', width: 25 },
     { header: 'Tracking 번호', key: 'trackingNumber', width: 25 },
     { header: '통관접수시간', key: 'acceptanceTime', width: 20 },
     { header: '수리시간', key: 'clearanceTime', width: 20 },
