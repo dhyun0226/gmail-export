@@ -387,7 +387,16 @@ const downloadExcel = async () => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ emails: emails.value }),
+      body: JSON.stringify({ 
+        emails: emails.value.map(email => ({
+          id: email.id,
+          subject: email.subject,
+          blNumber: email.blNumber,
+          trackingNumber: email.trackingNumber,
+          date: email.date,
+          time: email.time
+        }))
+      }),
     });
 
     if (!response.ok) throw new Error("Download failed");
