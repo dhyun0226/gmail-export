@@ -11,6 +11,9 @@ const patterns = [
   
   // CNW 패턴
   { name: 'CNW', regex: /CNW Pre-Alert\s*-\s*(\d+)/ },
+
+  // CEVA 패턴
+  { name: 'CEVA', regex: /Shipment No\s+(\S+)/ },
   
   
   // 일반적인 패턴들
