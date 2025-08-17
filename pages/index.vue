@@ -393,6 +393,8 @@ const downloadExcel = async () => {
           subject: email.subject,
           blNumber: email.blNumber,
           trackingNumber: email.trackingNumber,
+          acceptanceTime: email.acceptanceTime,
+          clearanceTime: email.clearanceTime,
           date: email.date,
           time: email.time
         }))
