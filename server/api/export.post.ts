@@ -20,8 +20,8 @@ export default defineEventHandler(async (event) => {
     { header: '제목', key: 'subject', width: 50 },
     { header: 'B/L 번호', key: 'blNumber', width: 25 },
     { header: 'Tracking 번호', key: 'trackingNumber', width: 25 },
-    // { header: '통관접수시간', key: 'acceptanceTime', width: 20 },
-    // { header: '수리시간', key: 'clearanceTime', width: 20 },
+    { header: '통관접수시간', key: 'acceptanceTime', width: 20 },
+    { header: '수리시간', key: 'clearanceTime', width: 20 },
     { header: '메일 수신날짜', key: 'date', width: 15 },
     { header: '메일 수신시간', key: 'time', width: 10 }
   ];
@@ -53,8 +53,8 @@ export default defineEventHandler(async (event) => {
       subject: currentEmail.subject,
       blNumber: currentEmail.blNumber,
       trackingNumber: currentEmail.trackingNumber || 'N/A',
-      // acceptanceTime: currentEmail.acceptanceTime || '-',
-      // clearanceTime: currentEmail.clearanceTime || '-',
+      acceptanceTime: currentEmail.acceptanceTime || '-',
+      clearanceTime: currentEmail.clearanceTime || '-',
       date: currentEmail.date,
       time: currentEmail.time
     });
@@ -66,8 +66,8 @@ export default defineEventHandler(async (event) => {
         subject: '', // 제목은 비워둠
         blNumber: email.blNumber,
         trackingNumber: email.trackingNumber || 'N/A',
-        // acceptanceTime: email.acceptanceTime || '-',
-        // clearanceTime: email.clearanceTime || '-',
+        acceptanceTime: email.acceptanceTime || '-',
+        clearanceTime: email.clearanceTime || '-',
         date: email.date,
         time: email.time
       });
