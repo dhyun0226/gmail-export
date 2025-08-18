@@ -116,13 +116,22 @@
               <span class="text-accent-DEFAULT">{{ emails.length }}</span
               >개
             </h2>
-            <button
-              @click="downloadExcel"
-              :disabled="downloading"
-              class="bg-accent-dark hover:bg-accent-dark disabled:bg-secondary-light text-white font-semibold py-2.5 px-6 rounded-lg transition duration-300 ease-in-out shadow-md"
-            >
-              {{ downloading ? "다운로드 중..." : "엑셀 다운로드" }}
-            </button>
+            <div class="flex gap-3">
+              <button
+                @click="downloadFile('xlsx')"
+                :disabled="downloading"
+                class="bg-accent-dark hover:bg-accent-dark disabled:bg-secondary-light text-white font-semibold py-2.5 px-6 rounded-lg transition duration-300 ease-in-out shadow-md"
+              >
+                {{ downloading === 'xlsx' ? "다운로드 중..." : "엑셀 다운로드" }}
+              </button>
+              <button
+                @click="downloadFile('csv')"
+                :disabled="downloading"
+                class="bg-primary-dark hover:bg-primary-dark disabled:bg-secondary-light text-white font-semibold py-2.5 px-6 rounded-lg transition duration-300 ease-in-out shadow-md"
+              >
+                {{ downloading === 'csv' ? "다운로드 중..." : "CSV 다운로드" }}
+              </button>
+            </div>
           </div>
 
           <div class="overflow-x-auto">
@@ -260,7 +269,7 @@ const blYear = ref(new Date().getFullYear().toString());
 const loading = ref(false);
 const loadingTime = ref(0);
 let loadingTimer: NodeJS.Timeout | null = null;
-const downloading = ref(false);
+const downloading = ref(false as false | 'xlsx' | 'csv');
 const error = ref("");
 const xmlDebugging = ref(false);
 const displayCount = ref(50);
@@ -377,9 +386,9 @@ const fetchEmails = async () => {
   }
 };
 
-// 엑셀 다운로드
-const downloadExcel = async () => {
-  downloading.value = true;
+// 파일 다운로드 (엑셀/CSV)
+const downloadFile = async (format: 'xlsx' | 'csv') => {
+  downloading.value = format;
 
   try {
     const response = await fetch("/api/export", {
@@ -388,6 +397,7 @@ const downloadExcel = async () => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ 
+        format: format,
         emails: emails.value.map(email => ({
           id: email.id,
           subject: email.subject,
@@ -407,11 +417,11 @@ const downloadExcel = async () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `gmail_export_${new Date().toISOString().split("T")[0]}.xlsx`;
+    a.download = `gmail_export_${new Date().toISOString().split("T")[0]}.${format}`;
     a.click();
     window.URL.revokeObjectURL(url);
   } catch (err) {
-    error.value = "엑셀 다운로드 중 오류가 발생했습니다.";
+    error.value = `${format.toUpperCase()} 다운로드 중 오류가 발생했습니다.`;
   } finally {
     downloading.value = false;
   }
