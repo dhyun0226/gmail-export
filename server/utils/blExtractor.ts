@@ -4,7 +4,13 @@
 const patterns = [
   // EI 패턴들 (| 문자 제거를 위해 더 명확한 패턴)
   { name: 'EI_HB', regex: /HB:\s*(\d+)(?:\||$|\s)/ },
-  { name: 'EI_HAWB', regex: /HAWB#\s*(\d+)(?:\||$|\s)/ },
+  { name: 'EI_HAWB_HASH', regex: /HAWB#\s*(\d+)(?:\||$|\s)/ },
+  
+  // HAWB 콜론 패턴 (알파벳+숫자 조합 포함)
+  { name: 'EI_HAWB_COLON', regex: /HAWB:\s*([A-Z0-9]+)(?:\s|$)/ },
+  
+  // FedEx 전용 AWB 패턴
+  { name: 'FEDEX_AWB', regex: /AWB\s*#\s*-\s*(\d+)/ },
   
   // DHL 패턴 (숫자만 추출)
   { name: 'DHL', regex: /DHL\s+(\d+)/ },
@@ -15,8 +21,7 @@ const patterns = [
   // CEVA 패턴
   { name: 'CEVA', regex: /Shipment No\s+(\S+)/ },
   
-  
-  // 일반적인 패턴들
+  // 일반적인 AWB 패턴 (마지막에 배치)
   { name: 'AWB', regex: /AWB\s+(\S+)/ },
 ];
 
