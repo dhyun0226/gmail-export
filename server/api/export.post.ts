@@ -57,9 +57,10 @@ export default defineEventHandler(async (event) => {
     
     for (const email of emails) {
       const emailDateTime = parseEmailDateTime(email.date, email.time);
-      const hawbValue = (email.trackingNumber && email.trackingNumber !== 'N/A') 
-        ? email.trackingNumber 
-        : email.blNumber;
+      const hawbValue = email.blNumber;
+      // const hawbValue = (email.trackingNumber && email.trackingNumber !== 'N/A') 
+      //   ? email.trackingNumber 
+      //   : email.blNumber;
       
       // All Docs Received (모든 이메일에 대해)
       allDocsReceived.push({
