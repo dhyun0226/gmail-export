@@ -1,21 +1,22 @@
 <template>
   <div class="kpi-uploader">
     <div
-      @drop="handleDrop"
-      @dragover.prevent
-      @dragenter.prevent
-      @dragleave.prevent
+      @drop.prevent="handleDrop"
+      @dragover.prevent="isDragging = true"
+      @dragenter.prevent="isDragging = true"
+      @dragleave.prevent="isDragging = false"
       class="upload-area"
       :class="{ 'drag-over': isDragging }"
+      @click="() => fileInput?.click()"
     >
       <div v-if="!file" class="upload-prompt">
         <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <p class="upload-text">
-          엑셀 파일을 드래그하거나 클릭하여 업로드
+          엑셀 파일을 드래그하거나 클릭하여 선택
         </p>
-        <p class="upload-hint">KPI 수입.xls 파일을 업로드해주세요</p>
+        <p class="upload-hint">KPI 수입.xls 또는 .xlsx 파일을 선택해주세요</p>
         <input
           ref="fileInput"
           type="file"
@@ -31,18 +32,12 @@
           <h3>{{ file.name }}</h3>
           <p>{{ formatFileSize(file.size) }}</p>
         </div>
-        <button @click="removeFile" class="remove-btn">
+        <button @click.stop="removeFile" class="remove-btn">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
           </svg>
         </button>
       </div>
-    </div>
-    
-    <div v-if="file" class="action-buttons">
-      <button @click="uploadFile" :disabled="uploading" class="upload-btn">
-        {{ uploading ? '업로드 중...' : 'BL 번호 추출' }}
-      </button>
     </div>
     
     <div v-if="error" class="error-message">
@@ -54,27 +49,22 @@
 <script setup lang="ts">
 import { ref, defineEmits } from 'vue';
 
+// 부모에게 file-selected 이벤트를 발생시킴
 const emit = defineEmits<{
-  uploaded: [data: { blNumbers: string[], fileName: string }]
+  (e: 'file-selected', file: File | null): void
 }>();
 
 const fileInput = ref<HTMLInputElement>();
 const file = ref<File | null>(null);
 const isDragging = ref(false);
-const uploading = ref(false);
 const error = ref('');
 
 const handleDrop = (e: DragEvent) => {
   e.preventDefault();
   isDragging.value = false;
-  
   const files = e.dataTransfer?.files;
   if (files && files.length > 0) {
-    const droppedFile = files[0];
-    if (validateFile(droppedFile)) {
-      file.value = droppedFile;
-      error.value = '';
-    }
+    selectFile(files[0]);
   }
 };
 
@@ -82,27 +72,29 @@ const handleFileSelect = (e: Event) => {
   const target = e.target as HTMLInputElement;
   const files = target.files;
   if (files && files.length > 0) {
-    if (validateFile(files[0])) {
-      file.value = files[0];
-      error.value = '';
-    }
+    selectFile(files[0]);
+  }
+};
+
+const selectFile = (selectedFile: File) => {
+  if (validateFile(selectedFile)) {
+    file.value = selectedFile;
+    error.value = '';
+    emit('file-selected', file.value); // 파일 객체를 부모로 전달
   }
 };
 
 const validateFile = (f: File): boolean => {
   const validExtensions = ['.xlsx', '.xls'];
   const fileExtension = f.name.toLowerCase().substring(f.name.lastIndexOf('.'));
-  
   if (!validExtensions.includes(fileExtension)) {
     error.value = '엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.';
     return false;
   }
-  
-  if (f.size > 10 * 1024 * 1024) {
+  if (f.size > 10 * 1024 * 1024) { // 10MB
     error.value = '파일 크기는 10MB 이하여야 합니다.';
     return false;
   }
-  
   return true;
 };
 
@@ -112,47 +104,20 @@ const removeFile = () => {
   if (fileInput.value) {
     fileInput.value.value = '';
   }
-};
-
-const uploadFile = async () => {
-  if (!file.value) return;
-  
-  uploading.value = true;
-  error.value = '';
-  
-  try {
-    const formData = new FormData();
-    formData.append('file', file.value);
-    
-    const response = await $fetch('/api/kpi/upload', {
-      method: 'POST',
-      body: formData
-    });
-    
-    if (response.success) {
-      emit('uploaded', {
-        blNumbers: response.blNumbers,
-        fileName: response.fileName
-      });
-    } else {
-      error.value = response.error || '업로드 실패';
-    }
-  } catch (err: any) {
-    error.value = err.message || '업로드 중 오류가 발생했습니다.';
-  } finally {
-    uploading.value = false;
-  }
+  emit('file-selected', null); // 파일 제거를 부모로 전달
 };
 
 const formatFileSize = (bytes: number): string => {
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
   if (bytes === 0) return '0 Bytes';
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 </script>
 
 <style scoped>
+/* 스타일은 이전과 동일하게 유지됩니다. */
 .kpi-uploader {
   width: 100%;
   max-width: 600px;
@@ -251,34 +216,6 @@ const formatFileSize = (bytes: number): string => {
 
 .remove-btn:hover {
   background: #fca5a5;
-}
-
-.action-buttons {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
-}
-
-.upload-btn {
-  padding: 12px 32px;
-  background: #3b82f6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.upload-btn:hover:not(:disabled) {
-  background: #2563eb;
-  transform: translateY(-1px);
-}
-
-.upload-btn:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
 }
 
 .error-message {
