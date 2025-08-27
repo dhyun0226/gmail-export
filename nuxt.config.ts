@@ -25,5 +25,19 @@ export default defineNuxtConfig({
     public: {
       appUrl: process.env.PUBLIC_APP_URL || 'http://localhost:3000'
     }
+  },
+
+  // Vite 설정을 통해 xlsx 라이브러리 별칭(alias) 지정
+  vite: {
+    resolve: {
+      alias: {
+        /**
+         * [핵심] xlsx 라이브러리의 전체 버전 대신 코어 버전을 사용하도록 강제합니다.
+         * 코어 버전에는 cpexcel.js 와 같은 코드페이지 관련 기능이 제외되어 있어
+         * Vercel 빌드 시 ERR_MODULE_NOT_FOUND 오류를 원천적으로 방지합니다.
+         */
+        'xlsx': 'xlsx/dist/xlsx.core.min.js'
+      }
+    }
   }
 })
