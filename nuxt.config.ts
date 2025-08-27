@@ -17,6 +17,14 @@ export default defineNuxtConfig({
   pages: true,
   nitro: {
     preset: 'vercel',
+    /**
+     * [핵심 수정] 서버 빌드를 담당하는 Nitro에 직접 별칭을 설정합니다.
+     * Vite 설정을 사용하는 것보다 이 방법이 Vercel 빌드에 더 직접적이고 확실하게 적용됩니다.
+     * 이를 통해 xlsx 라이브러리가 코어 버전으로 강제 치환됩니다.
+     */
+    alias: {
+      'xlsx': 'xlsx/dist/xlsx.core.min.js'
+    }
   },
   runtimeConfig: {
     googleClientId: process.env.GOOGLE_CLIENT_ID || '',
@@ -24,20 +32,6 @@ export default defineNuxtConfig({
     googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || '',
     public: {
       appUrl: process.env.PUBLIC_APP_URL || 'http://localhost:3000'
-    }
-  },
-
-  // Vite 설정을 통해 xlsx 라이브러리 별칭(alias) 지정
-  vite: {
-    resolve: {
-      alias: {
-        /**
-         * [핵심] xlsx 라이브러리의 전체 버전 대신 코어 버전을 사용하도록 강제합니다.
-         * 코어 버전에는 cpexcel.js 와 같은 코드페이지 관련 기능이 제외되어 있어
-         * Vercel 빌드 시 ERR_MODULE_NOT_FOUND 오류를 원천적으로 방지합니다.
-         */
-        'xlsx': 'xlsx/dist/xlsx.core.min.js'
-      }
     }
   }
 })
