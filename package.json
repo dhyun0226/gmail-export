@@ -12,7 +12,6 @@
   "dependencies": {
     "@nuxtjs/tailwindcss": "^6.8.0",
     "@types/formidable": "^3.4.5",
-    "@upstash/redis": "^1.35.3",
     "exceljs": "^4.4.0",
     "fast-xml-parser": "^5.2.5",
     "formidable": "^3.5.4",

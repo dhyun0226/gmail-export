@@ -2,7 +2,7 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
 export default defineNuxtConfig({
-  // --- 기존 설정 ---
+  // --- 기존 설정 보존 --- 
   app: {
     head: {
       link: [
@@ -19,7 +19,7 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss'],
   pages: true,
 
-  // --- 기존 runtimeConfig 설정 ---
+  // --- [복구] 기존 runtimeConfig 설정 --- 
   runtimeConfig: {
     googleClientId: process.env.GOOGLE_CLIENT_ID || '',
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
@@ -29,13 +29,12 @@ export default defineNuxtConfig({
     }
   },
 
-  // --- 빌드 최적화 설정 ---
+  // --- [적용] 새로운 빌드 최적화 설정 ---
   nitro: {
     preset: 'vercel',
     externals: {
       inline: ['xlsx']
     }
-    // storage 설정은 더 이상 필요 없으므로 제거되었습니다.
   },
   vite: {
     resolve: {
