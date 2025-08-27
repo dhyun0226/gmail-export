@@ -1,38 +1,58 @@
-import { put } from '@vercel/blob';
-import { nanoid } from 'nanoid';
+// server/api/kpi/upload.post.ts
+import { defineEventHandler, readMultipartFormData, createError } from 'h3'
+// CJS 대신 ESM 엔트리포인트를 직접 임포트
+import * as XLSX from 'xlsx/xlsx.mjs'
 
 export default defineEventHandler(async (event) => {
-  console.log('[KPI Upload] Processing file upload request');
-  
-  try {
-    // 클라이언트가 업로드할 파일의 원본 이름을 요청 body로 보냈다고 가정합니다.
-    const { filename } = await readBody(event);
+  console.log('[API] /api/kpi/upload: Received file upload request.')
 
-    if (!filename || typeof filename !== 'string') {
-      throw createError({
-        statusCode: 400,
-        statusMessage: '파일 이름(filename)이 필요합니다.',
-      });
+  try {
+    const parts = await readMultipartFormData(event)
+    const file = parts?.find(p => p.name === 'file' && p.data)
+
+    // [장점 1] GPT의 더 엄격한 유효성 검사 적용
+    if (!file || !(file.data instanceof Uint8Array) || file.data.length === 0) {
+      console.error('[API Error] No file data found in multipart form.')
+      throw createError({ statusCode: 400, statusMessage: '엑셀 파일이 업로드되지 않았습니다.' })
     }
 
-    // Vercel Blob에 저장될 경로 생성 (예: kpi-uploads/data_2023-10-27.xlsx)
-    const blobPathname = `kpi-uploads/${nanoid(8)}_${filename}`;
+    console.log(`[API] File received: ${file.filename || '(no name)'}, size: ${file.data.length} bytes.`)
 
-    const blob = await put(blobPathname, {
-      access: 'private', // 'private'으로 설정하여 아무나 접근 못하게 함
-    });
+    // UTF-8 강제 → cpexcel 동적 로딩 차단
+    const wb = XLSX.read(file.data, { type: 'buffer', codepage: 65001 })
+    const sheetName = wb.SheetNames[0]
+    
+    // [장점 2] GPT의 빈 시트 검사 로직 추가
+    if (!sheetName) throw createError({ statusCode: 400, statusMessage: '시트가 비어 있습니다.' })
 
-    // 클라이언트에게 업로드 URL과 최종 파일 경로를 반환
+    const ws = wb.Sheets[sheetName]
+    // [장점 3] GPT의 defval 옵션을 사용하여 데이터 일관성 확보
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 'A', defval: '' })
+
+    // [핵심] 기존 코드의 BL 번호 추출 로직 적용
+    const blNumbers: string[] = []
+    // 헤더 행(1행)을 제외하고 C열 데이터 추출
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i] as any
+      const blNumber = row['C']?.toString().trim()
+      if (blNumber) {
+        blNumbers.push(blNumber)
+      }
+    }
+
+    console.log(`[API] Successfully parsed and extracted ${blNumbers.length} BL numbers.`)
+
+    // 최종적으로 BL번호 리스트를 포함하여 반환
     return {
       success: true,
-      uploadUrl: blob.uploadUrl, // 클라이언트가 파일을 PUT할 URL
-      pathname: blob.pathname,   // 업로드 완료 후 파일이 저장된 경로
-    };
-  } catch (error: any) {
-    console.error('[KPI Upload] Error:', error);
-    throw createError({
-      statusCode: 500,
-      statusMessage: error.message || '파일 업로드 URL 생성에 실패했습니다.',
-    });
+      fileName: file.filename || 'unknown.xlsx',
+      rowCount: blNumbers.length,
+      blNumbers: [...new Set(blNumbers)] // 중복 제거
+    }
+
+  } catch (err: any) {
+    console.error('[API Error] Failed to process file:', err)
+    // [장점 4] GPT의 더 상세한 에러 리포팅 방식 적용
+    throw createError({ statusCode: err?.statusCode || 500, statusMessage: err?.statusMessage || '파일 처리 중 서버 오류가 발생했습니다.' })
   }
-});
+})
