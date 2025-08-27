@@ -113,7 +113,7 @@ import KpiProcessingStatus from '~/components/kpi/KpiProcessingStatus.vue';
 import KpiResultTable from '~/components/kpi/KpiResultTable.vue';
 import KpiDownloadButton from '~/components/kpi/KpiDownloadButton.vue';
 
-// --- 상태 관리 --- 
+// 상태 관리
 const isAuthenticated = ref(false);
 const userEmail = ref('');
 const blNumbers = ref<string[]>([]);
@@ -125,82 +125,60 @@ const results = ref<any[]>([]);
 const statistics = ref(null);
 const error = ref('');
 
-// --- 타이머 상태 ---
-const elapsedSeconds = ref(0);
-const timerInterval = ref<NodeJS.Timeout | null>(null);
-
-// --- 인증 관련 (변경 없음) ---
-const checkAuth = async () => { /* ... */ };
-const login = () => { /* ... */ };
-const logout = async () => { /* ... */ };
-
-// --- 새로운 통합 프로세스 --- 
-
-// 1. 자식 컴포넌트에서 파일 선택/제거 이벤트를 받음
-const handleFileSelected = (file: File | null) => {
-  selectedFile.value = file;
-  if (file) {
-    uploadedFileName.value = file.name;
+// 인증 확인
+const checkAuth = async () => {
+  try {
+    const data = await $fetch('/api/user');
+    if (data.authenticated && data.user) {
+      isAuthenticated.value = true;
+      userEmail.value = data.user.email;
+    }
+  } catch (err) {
+    console.error('Auth check error:', err);
   }
-  // 파일이 바뀌면 이전 결과는 초기화
+};
+
+// 로그인
+const login = () => {
+  window.location.href = '/api/auth/google';
+};
+
+// 로그아웃
+const logout = async () => {
+  try {
+    await $fetch('/api/auth/logout', { method: 'POST' });
+    isAuthenticated.value = false;
+    userEmail.value = '';
+    blNumbers.value = [];
+    results.value = [];
+    statistics.value = null;
+  } catch (err) {
+    console.error('Logout error:', err);
+  }
+};
+
+// 파일 업로드 완료 처리
+const handleFileUploaded = (data: { blNumbers: string[], fileName: string }) => {
+  blNumbers.value = data.blNumbers;
+  uploadedFileName.value = data.fileName;
   results.value = [];
   statistics.value = null;
   error.value = '';
 };
 
-// 2. 타이머 시작/정지 함수
-const startTimer = () => {
-  stopTimer(); // 기존 타이머가 있다면 초기화
-  elapsedSeconds.value = 0;
-  timerInterval.value = setInterval(() => {
-    elapsedSeconds.value++;
-  }, 1000);
-};
-
-const stopTimer = () => {
-  if (timerInterval.value) {
-    clearInterval(timerInterval.value);
-    timerInterval.value = null;
-  }
-};
-
-// 3. "업로드 및 조회 시작" 버튼에 연결된 메인 함수
-const startFullProcess = async () => {
-  if (!selectedFile.value || !blYear.value) return;
-
+// 데이터 처리
+const processData = async () => {
+  if (!blYear.value || blNumbers.value.length === 0) return;
+  
   processing.value = true;
   error.value = '';
-  results.value = [];
-  statistics.value = null;
-  startTimer();
-
+  currentStep.value = '데이터 조회를 시작합니다...';
+  
   try {
-    // 3-1. Presigned URL 요청
-    currentStep.value = '업로드 준비 중...';
-    const presignResponse = await $fetch('/api/kpi/upload', {
-      method: 'POST',
-      body: { filename: selectedFile.value.name },
-    });
-
-    if (!presignResponse.success || !presignResponse.uploadUrl) {
-      throw new Error('업로드 URL을 받아오지 못했습니다.');
-    }
-
-    // 3-2. Vercel Blob에 파일 업로드
-    currentStep.value = '파일 업로드 중...';
-    const blobUploadResult = await fetch(presignResponse.uploadUrl, {
-      method: 'PUT',
-      body: selectedFile.value,
-      headers: { 'Content-Type': selectedFile.value.type },
-    });
-
-    if (!blobUploadResult.ok) {
-      throw new Error('클라우드에 파일 업로드를 실패했습니다.');
-    }
-
-    // 3-3. 통합 처리 API 호출
-    currentStep.value = 'Gmail 및 유니패스 데이터 조회 중...';
-    const processResponse = await $fetch('/api/kpi/process-blob', {
+    // 유니패스 및 Gmail 데이터 조회
+    currentStep.value = 'Gmail 및 유니패스 데이터를 조회하고 있습니다...';
+    
+    const response = await $fetch('/api/kpi/process', {
       method: 'POST',
       body: {
         blNumbers: blNumbers.value,
@@ -236,12 +214,36 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* --- 새로운 레이아웃 스타일 --- */
-.input-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 24px;
+.kpi-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.kpi-header {
+  text-align: center;
+  color: white;
+  margin-bottom: 40px;
+  padding-top: 40px;
+}
+
+.kpi-header h1 {
+  font-size: 36px;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.kpi-header p {
+  font-size: 18px;
+  opacity: 0.9;
+}
+
+.user-info {
+  margin-top: 20px;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 16px;
 }
 
 .user-info span {
@@ -422,8 +424,58 @@ onMounted(() => {
   margin: 0 0 12px 0;
 }
 
-/* --- 기존 스타일 (변경 없음) --- */
-.kpi-container, .kpi-header, .user-info, .logout-btn, .login-section, .login-card, .login-btn, .google-icon, .kpi-main, .step-section, .step-header, .step-number, .error-container, .error-content, .error-icon {
-  /* ... */
+.bl-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.bl-chip {
+  display: inline-block;
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  color: #374151;
+}
+
+.bl-more {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  color: #6b7280;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.error-container {
+  max-width: 600px;
+  margin: 40px auto;
+}
+
+.error-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border-left: 4px solid #ef4444;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.1);
+}
+
+.error-icon {
+  width: 32px;
+  height: 32px;
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.error-content p {
+  margin: 0;
+  color: #dc2626;
+  font-size: 15px;
 }
 </style>
