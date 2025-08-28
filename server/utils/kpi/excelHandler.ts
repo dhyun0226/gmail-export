@@ -86,11 +86,11 @@ export function createResultExcel(results: KpiProcessResult[], originalData?: an
     if (originalRow['C'] !== undefined) rowData['C'] = originalRow['C'];  // BL번호는 C열에 있음
     
     // D열부터 새로운 데이터 추가
-    rowData['D'] = result.mailReceiveTime || '-';           // D열: 메일 수신 시간
-    rowData['E'] = result.lowerDeclAcceptTime || '-';      // E열: 하기신고수리일시
-    rowData['F'] = result.warehouseEntryTime || '-';       // F열: 창고반입일시
-    rowData['G'] = result.importDeclTime || '-';           // G열: 수입신고일시
-    rowData['H'] = result.importAcceptTime || '-';         // H열: 수입신고수리일시
+    rowData['D'] = result.mailReceiveTime || '';           // D열: 메일 수신 시간 (공란 처리)
+    rowData['E'] = result.lowerDeclAcceptTime || '';      // E열: 하기신고수리일시 (공란 처리)
+    rowData['F'] = result.warehouseEntryTime || '';       // F열: 창고반입일시 (공란 처리)
+    rowData['G'] = result.importDeclTime || '';           // G열: 수입신고일시 (공란 처리)
+    rowData['H'] = result.importAcceptTime || '';         // H열: 수입신고수리일시 (공란 처리)
     rowData['I'] = 0.2;                                     // I열: 무조건 0.2
     
     // J열: H열 - E열 (수입신고수리일시 - 하기신고수리일시) 시간 차이를 일 단위로
@@ -115,13 +115,33 @@ export function createResultExcel(results: KpiProcessResult[], originalData?: an
       rowData['M'] = '';  // L열이 공란이면 M열도 공란
     }
     
-    // 원본 엑셀의 D열 이후 데이터가 있다면 N열부터 추가
+    // N열: 메일 수신 시간이 영업시간(09:00~18:00) 외인지 체크
+    if (result.mailReceiveTime) {
+      try {
+        // 메일 수신 시간에서 시간 부분만 추출
+        const mailDate = new Date(result.mailReceiveTime);
+        const hour = mailDate.getHours();
+        
+        // 09:00~18:00 범위를 벗어나면 표시
+        if (hour < 9 || hour >= 18) {
+          rowData['N'] = 'Out of local Customs office hours';
+        } else {
+          rowData['N'] = '';
+        }
+      } catch (error) {
+        rowData['N'] = '';
+      }
+    } else {
+      rowData['N'] = '';
+    }
+    
+    // 원본 엑셀의 D열 이후 데이터가 있다면 O열부터 추가
     const originalKeys = Object.keys(originalRow).filter(key => 
       key !== 'A' && key !== 'B' && key !== 'C' && key.charCodeAt(0) >= 68
     );
     
     originalKeys.forEach(key => {
-      const newColumnIndex = key.charCodeAt(0) - 68 + 78; // D는 68, N은 78
+      const newColumnIndex = key.charCodeAt(0) - 68 + 79; // D는 68, O는 79 (N열 때문에 한 칸 밀림)
       const newColumnName = String.fromCharCode(newColumnIndex);
       if (newColumnIndex <= 90) { // Z열까지만
         rowData[newColumnName] = originalRow[key];
@@ -134,21 +154,43 @@ export function createResultExcel(results: KpiProcessResult[], originalData?: an
   // 워크시트 생성
   const worksheet = XLSX.utils.json_to_sheet(excelData, { header: Object.keys(excelData[0] || {}).sort() });
   
+  // 헤더 행 설정 (첫 번째 행)
+  const headers = {
+    'A1': { v: 'AMAT WK', t: 's' },
+    'B1': { v: 'AMAT MONTH', t: 's' },
+    'C1': { v: 'HAWB', t: 's' },
+    'D1': { v: 'DHL Doc', t: 's' },
+    'E1': { v: 'Dest.Arrival', t: 's' },
+    'F1': { v: 'Warehouse', t: 's' },
+    'G1': { v: 'Submitted to Customs', t: 's' },
+    'H1': { v: 'Custom Clearance', t: 's' },
+    'I1': { v: 'KPI(Hour)', t: 's' },
+    'J1': { v: 'Actual', t: 's' },
+    'K1': { v: 'Diff time', t: 's' },
+    'L1': { v: 'Actual(DHL)', t: 's' },
+    'M1': { v: 'Diff time(DHL)', t: 's' },
+    'N1': { v: 'Delay Reason Details', t: 's' }
+  };
+  
+  // 헤더 적용
+  Object.assign(worksheet, headers);
+  
   // 컬럼 너비 설정
   const columnWidths = [
-    { wch: 15 },  // A열: 원본 데이터
-    { wch: 15 },  // B열: 원본 데이터
-    { wch: 20 },  // C열: B/L 번호 (원본)
-    { wch: 20 },  // D열: 메일 수신 시간
-    { wch: 20 },  // E열: 하기신고수리일시
-    { wch: 20 },  // F열: 창고반입일시
-    { wch: 20 },  // G열: 수입신고일시
-    { wch: 20 },  // H열: 수입신고수리일시
-    { wch: 10 },  // I열: 0.2 (고정값)
-    { wch: 10 },  // J열: H-E 시간차 (일 단위)
-    { wch: 10 },  // K열: J-I 결과
-    { wch: 10 },  // L열: H-D 시간차
-    { wch: 10 },  // M열: L-I 결과
+    { wch: 12 },  // A열: AMAT WK
+    { wch: 15 },  // B열: AMAT MONTH
+    { wch: 18 },  // C열: HAWB
+    { wch: 18 },  // D열: DHL Doc
+    { wch: 18 },  // E열: Dest.Arrival
+    { wch: 15 },  // F열: Warehouse
+    { wch: 22 },  // G열: Submitted to Customs
+    { wch: 18 },  // H열: Custom Clearance
+    { wch: 12 },  // I열: KPI(Hour)
+    { wch: 12 },  // J열: Actual
+    { wch: 12 },  // K열: Diff time
+    { wch: 15 },  // L열: Actual(DHL)
+    { wch: 18 },  // M열: Diff time(DHL)
+    { wch: 25 },  // N열: Delay Reason Details
   ];
   worksheet['!cols'] = columnWidths;
   
@@ -164,12 +206,12 @@ export function createResultExcel(results: KpiProcessResult[], originalData?: an
  */
 export function createResultCSV(results: KpiProcessResult[]): string {
   const headers = [
-    'B/L 번호',
-    '메일 수신 시간',
-    '하기신고수리일시',
-    '창고반입일시',
-    '수입신고일시',
-    '수입신고수리일시'
+    'HAWB',
+    'DHL Doc',
+    'Dest.Arrival',
+    'Warehouse',
+    'Submitted to Customs',
+    'Custom Clearance'
   ];
   
   const rows = results.map(result => [

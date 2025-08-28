@@ -6,11 +6,24 @@
     </div>
     
     <div v-if="isProcessing" class="progress-info">
-      <p>BL 번호 데이터를 조회하고 있습니다...</p>
+      <p class="progress-main">
+        <span>🔄 데이터 처리 중...</span>
+        <span class="processing-time">({{ formatTime(processingTime) }} 경과)</span>
+      </p>
       <p class="progress-detail">{{ currentStep }}</p>
-      <div class="progress-bar">
-        <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+      
+      <!-- 전체 진행률 -->
+      <div class="progress-section">
+        <div class="progress-label">
+          <span>전체 진행률: {{ processedCount || 0 }}/{{ totalCount || 0 }} BL</span>
+          <span>{{ Math.round(((processedCount || 0) / (totalCount || 1)) * 100) }}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" :style="{ width: ((processedCount || 0) / (totalCount || 1)) * 100 + '%' }"></div>
+        </div>
       </div>
+      
+      <!-- 단순화된 진행률 표시 - 복잡한 phase 분리 제거 -->
     </div>
     
     <div v-if="statistics" class="statistics">
@@ -70,9 +83,27 @@ const props = defineProps<{
   isProcessing: boolean;
   statistics?: Statistics;
   currentStep?: string;
+  processingTime?: number;
+  processedCount?: number;
+  totalCount?: number;
+  currentPhase?: 'gmail' | 'unipass' | 'complete';
 }>();
 
 const progressPercent = ref(0);
+
+// 초를 분:초 형식으로 변환
+const formatTime = (seconds: number | undefined): string => {
+  if (!seconds) return '0초';
+  
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  
+  if (minutes === 0) {
+    return `${seconds}초`;
+  } else {
+    return `${minutes}분 ${remainingSeconds}초`;
+  }
+};
 
 watch(() => props.isProcessing, (newVal) => {
   if (newVal) {
@@ -136,9 +167,35 @@ watch(() => props.isProcessing, (newVal) => {
   color: #4b5563;
 }
 
+.progress-main {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
 .progress-detail {
   font-size: 14px;
   color: #6b7280;
+  margin-bottom: 20px;
+}
+
+.processing-time {
+  font-weight: 600;
+  color: #3b82f6;
+  margin-left: 8px;
+}
+
+.progress-section {
+  margin-bottom: 20px;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
 }
 
 .progress-bar {
@@ -146,7 +203,6 @@ watch(() => props.isProcessing, (newVal) => {
   background: #e5e7eb;
   border-radius: 4px;
   overflow: hidden;
-  margin-top: 12px;
 }
 
 .progress-fill {
@@ -155,6 +211,8 @@ watch(() => props.isProcessing, (newVal) => {
   border-radius: 4px;
   transition: width 0.3s ease;
 }
+
+/* 복잡한 phase 스타일 제거 - 단순한 진행률만 사용 */
 
 .statistics {
   margin-top: 20px;

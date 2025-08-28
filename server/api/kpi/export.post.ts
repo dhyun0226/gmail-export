@@ -6,8 +6,8 @@ export default defineEventHandler(async (event) => {
   
   try {
     // 요청 바디 파싱
-    const body = await readBody<KpiExportRequest>(event);
-    const { results, originalFileName } = body;
+    const body = await readBody<any>(event);
+    const { results, originalFileName, rawData } = body;
     const format = getQuery(event).format || 'xlsx';
     
     if (!results || results.length === 0) {
@@ -16,9 +16,6 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'No results to export'
       });
     }
-    
-    // 세션에서 원본 데이터 가져오기 (옵션)
-    const rawData = await useStorage().getItem(`kpi:rawData:${event.context.sessionId}`);
     
     let fileBuffer: Buffer;
     let mimeType: string;
@@ -31,8 +28,8 @@ export default defineEventHandler(async (event) => {
       mimeType = 'text/csv';
       fileName = `KPI_결과_${new Date().toISOString().split('T')[0]}.csv`;
     } else {
-      // Excel 생성
-      fileBuffer = createResultExcel(results, rawData as any[]);
+      // Excel 생성 - 원본 데이터와 함께
+      fileBuffer = createResultExcel(results, rawData);
       mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
       fileName = `KPI_결과_${new Date().toISOString().split('T')[0]}.xlsx`;
     }

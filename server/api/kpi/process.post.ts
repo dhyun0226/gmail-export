@@ -33,22 +33,24 @@ export default defineEventHandler(async (event) => {
     // Gmail 클라이언트 가져오기
     const gmail = await getGmailClient(accessToken);
     
-    // 날짜 범위 설정 (최근 1년)
+    // 날짜 범위 설정 (최근 1개월)
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setFullYear(startDate.getFullYear() - 1);
+    startDate.setMonth(startDate.getMonth() - 1);
     
-    // BL 번호 처리
-    const results = await processBlNumbers(
+    
+    // BL 번호 처리 (단순화)
+    const processed = await processBlNumbers(
       blNumbers,
       year,
       gmail,
       {
         startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        useOptimizedGmailSearch: blNumbers.length > 10 // 10개 이상일 때 최적화 사용
+        endDate: endDate.toISOString()
       }
     );
+    
+    const { results } = processed;
     
     // 통계 생성
     const statistics = generateStatistics(results);
@@ -58,7 +60,13 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       results,
-      statistics
+      statistics,
+      progress: {
+        total: blNumbers.length,
+        processed: results.length,
+        phase: 'complete',
+        message: `처리 완료: ${results.length}개 BL`
+      }
     };
     
   } catch (error: any) {

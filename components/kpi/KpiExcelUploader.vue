@@ -55,7 +55,7 @@
 import { ref, defineEmits } from 'vue';
 
 const emit = defineEmits<{
-  uploaded: [data: { blNumbers: string[], fileName: string }]
+  uploaded: [data: { blNumbers: string[], fileName: string, rawData?: any[] }]
 }>();
 
 const fileInput = ref<HTMLInputElement>();
@@ -132,7 +132,8 @@ const uploadFile = async () => {
     if (response.success) {
       emit('uploaded', {
         blNumbers: response.blNumbers,
-        fileName: response.fileName
+        fileName: response.fileName,
+        rawData: response.rawData
       });
     } else {
       error.value = response.error || '업로드 실패';

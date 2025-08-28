@@ -29,68 +29,78 @@
 
     <!-- 메인 컨텐츠 (로그인 후) -->
     <div v-else class="kpi-main">
-      <!-- Step 1: 파일 업로드 -->
+      <!-- Step 1: 설정 및 파일 업로드 -->
       <div class="step-section">
         <div class="step-header">
           <span class="step-number">1</span>
-          <h2>엑셀 파일 업로드</h2>
+          <h2>설정 및 파일 업로드</h2>
         </div>
-        <KpiExcelUploader @uploaded="handleFileUploaded" />
-      </div>
-
-      <!-- Step 2: BL 년도 설정 -->
-      <div v-if="blNumbers.length > 0" class="step-section">
-        <div class="step-header">
-          <span class="step-number">2</span>
-          <h2>BL 년도 설정</h2>
-        </div>
-        <div class="year-input-section">
-          <p>유니패스 조회를 위한 BL 년도를 입력해주세요</p>
+        
+        <!-- BL 년도 입력 -->
+        <div class="setting-section">
+          <label class="setting-label">BL 년도</label>
           <input 
             v-model="blYear" 
             type="number" 
             placeholder="2024"
             class="year-input"
+            :disabled="processing"
           />
-          <button 
-            @click="processData" 
-            :disabled="!blYear || processing"
-            class="process-btn"
-          >
-            {{ processing ? '처리 중...' : '데이터 조회 시작' }}
-          </button>
+          <span class="setting-hint">유니패스 조회를 위한 년도를 입력하세요</span>
         </div>
-        <div class="bl-preview">
-          <h3>추출된 BL 번호 ({{ blNumbers.length }}개)</h3>
-          <div class="bl-list">
-            <span v-for="bl in blNumbers.slice(0, 10)" :key="bl" class="bl-chip">
-              {{ bl }}
-            </span>
-            <span v-if="blNumbers.length > 10" class="bl-more">
-              ... 외 {{ blNumbers.length - 10 }}개
-            </span>
+        
+        <!-- 파일 업로드 -->
+        <div class="upload-section">
+          <KpiExcelUploader @uploaded="handleFileUploaded" />
+        </div>
+        
+        <!-- 추출 시작 버튼 -->
+        <div v-if="uploadedFileName" class="action-section">
+          <div class="file-info-display">
+            <span class="file-icon">📄</span>
+            <span class="file-name">{{ uploadedFileName }}</span>
+            <span class="file-status">준비 완료</span>
+          </div>
+          
+          <button 
+            @click="startProcessing" 
+            :disabled="!blYear || !uploadedFileName || processing"
+            class="extract-btn"
+          >
+            {{ processing ? `처리 중... (${formatTime(processingTime)})` : '추출 시작' }}
+          </button>
+          
+          <div v-if="blNumbers.length > 0" class="bl-preview">
+            <h3>추출된 BL 번호 ({{ blNumbers.length }}개)</h3>
+            <div class="bl-list">
+              <span v-for="bl in blNumbers.slice(0, 10)" :key="bl" class="bl-chip">
+                {{ bl }}
+              </span>
+              <span v-if="blNumbers.length > 10" class="bl-more">
+                ... 외 {{ blNumbers.length - 10 }}개
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Step 3: 처리 상태 -->
+      <!-- Step 2: 처리 상태 -->
       <KpiProcessingStatus 
         :isProcessing="processing"
         :statistics="statistics"
         :currentStep="currentStep"
+        :processingTime="processingTime"
+        :processedCount="processedCount"
+        :totalCount="totalCount"
+        :currentPhase="currentPhase"
       />
 
-      <!-- Step 4: 결과 테이블 -->
+      <!-- Step 3: 결과 테이블 (다운로드 버튼 포함) -->
       <KpiResultTable 
         v-if="results.length > 0"
         :results="results"
-      />
-
-      <!-- Step 5: 다운로드 -->
-      <KpiDownloadButton 
-        :results="results"
         :originalFileName="uploadedFileName"
-        :hasResults="results.length > 0"
+        :rawData="rawData"
       />
     </div>
 
@@ -111,19 +121,40 @@ import { ref, onMounted } from 'vue';
 import KpiExcelUploader from '~/components/kpi/KpiExcelUploader.vue';
 import KpiProcessingStatus from '~/components/kpi/KpiProcessingStatus.vue';
 import KpiResultTable from '~/components/kpi/KpiResultTable.vue';
-import KpiDownloadButton from '~/components/kpi/KpiDownloadButton.vue';
 
 // 상태 관리
 const isAuthenticated = ref(false);
 const userEmail = ref('');
 const blNumbers = ref<string[]>([]);
 const uploadedFileName = ref('');
+const rawData = ref<any[]>([]); // 원본 엑셀 데이터 저장
 const blYear = ref(new Date().getFullYear().toString());
 const processing = ref(false);
+const processingTime = ref(0); // 처리 경과 시간
 const currentStep = ref('');
 const results = ref<any[]>([]);
 const statistics = ref(null);
 const error = ref('');
+let processingTimer: NodeJS.Timeout | null = null; // 타이머 ID 저장
+
+// 진행 상태
+const processedCount = ref(0);
+const totalCount = ref(0);
+const currentPhase = ref<'gmail' | 'unipass' | 'complete'>('gmail');
+
+// 초를 분:초 형식으로 변환
+const formatTime = (seconds: number): string => {
+  if (!seconds) return '0초';
+  
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  
+  if (minutes === 0) {
+    return `${seconds}초`;
+  } else {
+    return `${minutes}분 ${remainingSeconds}초`;
+  }
+};
 
 // 인증 확인
 const checkAuth = async () => {
@@ -157,27 +188,55 @@ const logout = async () => {
   }
 };
 
-// 파일 업로드 완료 처리
-const handleFileUploaded = (data: { blNumbers: string[], fileName: string }) => {
-  blNumbers.value = data.blNumbers;
+// 파일 업로드 완료 처리 (처리는 하지 않음)
+const handleFileUploaded = (data: { blNumbers: string[], fileName: string, rawData?: any[] }) => {
+  // 파일 정보만 저장, 실제 처리는 startProcessing에서 수행
   uploadedFileName.value = data.fileName;
+  blNumbers.value = data.blNumbers;
+  rawData.value = data.rawData || [];
+  
+  // 이전 결과 초기화
   results.value = [];
   statistics.value = null;
   error.value = '';
 };
 
-// 데이터 처리
+// 추출 시작 버튼 클릭 시 호출
+const startProcessing = async () => {
+  if (!blYear.value || blNumbers.value.length === 0) return;
+  
+  // 타이머 시작
+  processingTime.value = 0;
+  if (processingTimer) clearInterval(processingTimer);
+  processingTimer = setInterval(() => {
+    processingTime.value++;
+  }, 1000);
+  
+  // 데이터 처리 시작
+  await processData();
+  
+  // 타이머 정지
+  if (processingTimer) {
+    clearInterval(processingTimer);
+    processingTimer = null;
+  }
+};
+
+// 실제 데이터 처리 로직 (단순화)
 const processData = async () => {
   if (!blYear.value || blNumbers.value.length === 0) return;
   
   processing.value = true;
   error.value = '';
-  currentStep.value = '데이터 조회를 시작합니다...';
+  results.value = [];
+  processedCount.value = 0;
+  totalCount.value = blNumbers.value.length;
+  currentPhase.value = 'gmail';
   
   try {
-    // 유니패스 및 Gmail 데이터 조회
-    currentStep.value = 'Gmail 및 유니패스 데이터를 조회하고 있습니다...';
+    currentStep.value = `Gmail과 Unipass 데이터 조회 중... (${blNumbers.value.length}개 BL)`;
     
+    // 단일 API 호출로 모든 BL 처리
     const response = await $fetch('/api/kpi/process', {
       method: 'POST',
       body: {
@@ -189,9 +248,9 @@ const processData = async () => {
     if (response.success) {
       results.value = response.results;
       statistics.value = response.statistics;
-      currentStep.value = '처리 완료!';
-    } else {
-      throw new Error('처리 실패');
+      processedCount.value = blNumbers.value.length;
+      currentPhase.value = 'complete';
+      currentStep.value = `처리 완료! (${blNumbers.value.length}개 BL, 총 ${formatTime(processingTime.value)} 소요)`;
     }
     
   } catch (err: any) {
@@ -207,6 +266,8 @@ const processData = async () => {
     processing.value = false;
   }
 };
+
+// 통계는 서버에서 생성하므로 로컬 통계 함수 제거
 
 onMounted(() => {
   checkAuth();
@@ -363,16 +424,18 @@ onMounted(() => {
   margin: 0;
 }
 
-.year-input-section {
+.setting-section {
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 24px;
 }
 
-.year-input-section p {
-  color: #6b7280;
-  margin: 0;
+.setting-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  min-width: 80px;
 }
 
 .year-input {
@@ -389,24 +452,74 @@ onMounted(() => {
   border-color: #667eea;
 }
 
-.process-btn {
-  padding: 10px 24px;
+.year-input:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.setting-hint {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.upload-section {
+  margin-bottom: 24px;
+}
+
+.action-section {
+  margin-top: 24px;
+}
+
+.file-info-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f0f9ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.file-icon {
+  font-size: 24px;
+}
+
+.file-name {
+  flex: 1;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.file-status {
+  padding: 4px 12px;
+  background: #10b981;
+  color: white;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.extract-btn {
+  width: 100%;
+  padding: 14px 32px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
+  margin-bottom: 20px;
 }
 
-.process-btn:hover:not(:disabled) {
+.extract-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
 }
 
-.process-btn:disabled {
+.extract-btn:disabled {
   background: #9ca3af;
   cursor: not-allowed;
 }

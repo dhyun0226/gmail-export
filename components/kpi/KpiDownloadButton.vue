@@ -42,6 +42,7 @@ const props = defineProps<{
   results: any[];
   originalFileName?: string;
   hasResults: boolean;
+  rawData?: any[];
 }>();
 
 const downloading = ref<false | 'xlsx' | 'csv'>(false);
@@ -59,7 +60,8 @@ const download = async (format: 'xlsx' | 'csv') => {
       },
       body: JSON.stringify({
         results: props.results,
-        originalFileName: props.originalFileName
+        originalFileName: props.originalFileName,
+        rawData: props.rawData
       })
     });
     

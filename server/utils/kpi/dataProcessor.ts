@@ -1,50 +1,41 @@
 import type { KpiProcessResult } from './types';
 import { fetchMultipleUnipassData } from './unipassService';
-import { searchMultipleDHLMails, getAllDHLMails } from './gmailService';
+import { getAllDHLMails } from './gmailService';
 
 /**
- * BL 번호들을 처리하여 모든 시간 정보를 수집
+ * BL 번호들을 처리하여 모든 시간 정보를 수집 (단순화)
  */
 export async function processBlNumbers(
   blNumbers: string[],
   blYear: string,
   gmail: any,
-  options?: {
-    startDate?: string;
-    endDate?: string;
-    useOptimizedGmailSearch?: boolean;
+  options: {
+    startDate: string;
+    endDate: string;
   }
-): Promise<KpiProcessResult[]> {
-  console.log(`[KPI Processor] Starting process for ${blNumbers.length} BL numbers`);
+): Promise<{ results: KpiProcessResult[] }> {
+  console.log(`[KPI Processor] Starting simple process for ${blNumbers.length} BL numbers`);
   
   const results: KpiProcessResult[] = [];
   
   try {
-    // 1. 유니패스 데이터 일괄 조회
-    console.log('[KPI Processor] Fetching Unipass data...');
-    const unipassDataMap = await fetchMultipleUnipassData(blNumbers, blYear);
+    // Gmail과 Unipass 데이터를 병렬로 처리 (단순화)
+    console.log('[KPI Processor] Fetching Gmail and Unipass data in parallel...');
     
-    // 2. Gmail DHL 메일 조회
-    console.log('[KPI Processor] Fetching Gmail data...');
-    let gmailDataMap;
+    const [gmailDataMap, unipassDataMap] = await Promise.all([
+      getAllDHLMails(gmail, options.startDate, options.endDate),
+      fetchMultipleUnipassData(blNumbers, blYear)
+    ]);
     
-    if (options?.useOptimizedGmailSearch && options.startDate && options.endDate) {
-      // 최적화: 날짜 범위의 모든 DHL 메일을 한번에 조회
-      gmailDataMap = await getAllDHLMails(gmail, options.startDate, options.endDate);
-    } else {
-      // 개별 BL 번호별로 조회
-      gmailDataMap = await searchMultipleDHLMails(
-        gmail, 
-        blNumbers, 
-        options?.startDate, 
-        options?.endDate
-      );
-    }
+    console.log('[KPI Processor] Data fetching completed - Gmail:', gmailDataMap?.size || 0, 'Unipass:', unipassDataMap?.size || 0);
     
-    // 3. 결과 통합
+    // 결과 통합
+    console.log('[KPI Processor] Starting result merge, gmailDataMap size:', gmailDataMap?.size || 0);
+    console.log('[KPI Processor] unipassDataMap size:', unipassDataMap?.size || 0);
+    
     for (const blNumber of blNumbers) {
-      const unipassData = unipassDataMap.get(blNumber) || {};
-      const gmailData = gmailDataMap.get(blNumber) || {};
+      const unipassData = unipassDataMap?.get(blNumber) || {};
+      const gmailData = gmailDataMap?.get(blNumber) || {};
       
       const result: KpiProcessResult = {
         blNumber,
@@ -76,17 +67,19 @@ export async function processBlNumbers(
     
   } catch (error) {
     console.error('[KPI Processor] Processing error:', error);
+    console.error('[KPI Processor] Error details:', error instanceof Error ? error.message : error);
+    console.error('[KPI Processor] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
     // 에러 발생시 빈 결과 반환
     for (const blNumber of blNumbers) {
       results.push({
         blNumber,
-        error: '처리 중 오류 발생'
+        error: '처리 중 오류 발생: ' + (error instanceof Error ? error.message : String(error))
       });
     }
   }
   
-  return results;
+  return { results };
 }
 
 /**
@@ -112,9 +105,8 @@ export function generateStatistics(results: KpiProcessResult[]) {
     if (result.importAcceptTime) stats.withImportAccept++;
     if (result.error) stats.withError++;
     
-    // 모든 데이터가 있으면 완료로 처리
-    if (result.mailReceiveTime && 
-        result.lowerDeclAcceptTime && 
+    // 유니패스 데이터가 모두 있으면 완료로 처리 (메일은 선택적)
+    if (result.lowerDeclAcceptTime && 
         result.warehouseEntryTime && 
         result.importDeclTime && 
         result.importAcceptTime) {

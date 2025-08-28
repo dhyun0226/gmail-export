@@ -1,8 +1,21 @@
 <template>
   <div class="result-table" v-if="results && results.length > 0">
     <div class="table-header">
-      <h3>처리 결과</h3>
-      <span class="result-count">총 {{ results.length }}건</span>
+      <div class="header-left">
+        <h3>처리 결과</h3>
+        <span class="result-count">총 {{ results.length }}건</span>
+      </div>
+      <button 
+        v-if="results.length > 0"
+        @click="downloadExcel" 
+        :disabled="downloading"
+        class="excel-download-btn"
+      >
+        <svg class="icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20M12.5,10A3.5,3.5 0 0,1 16,13.5A3.5,3.5 0 0,1 12.5,17A3.5,3.5 0 0,1 9,13.5A3.5,3.5 0 0,1 12.5,10Z"/>
+        </svg>
+        <span>{{ downloading ? '다운로드 중...' : 'Excel 다운로드' }}</span>
+      </button>
     </div>
     
     <div class="table-wrapper">
@@ -23,11 +36,11 @@
           <tr v-for="(result, index) in displayResults" :key="index">
             <td class="text-center">{{ index + 1 }}</td>
             <td class="bl-number">{{ result.blNumber }}</td>
-            <td>{{ result.mailReceiveTime || '-' }}</td>
-            <td>{{ result.lowerDeclAcceptTime || '-' }}</td>
-            <td>{{ result.warehouseEntryTime || '-' }}</td>
-            <td>{{ result.importDeclTime || '-' }}</td>
-            <td>{{ result.importAcceptTime || '-' }}</td>
+            <td>{{ result.mailReceiveTime || '' }}</td>
+            <td>{{ result.lowerDeclAcceptTime || '' }}</td>
+            <td>{{ result.warehouseEntryTime || '' }}</td>
+            <td>{{ result.importDeclTime || '' }}</td>
+            <td>{{ result.importAcceptTime || '' }}</td>
             <td>
               <span v-if="result.error" class="status-badge error">
                 {{ result.error }}
@@ -35,8 +48,11 @@
               <span v-else-if="isComplete(result)" class="status-badge success">
                 완료
               </span>
-              <span v-else class="status-badge partial">
+              <span v-else-if="isPartial(result)" class="status-badge partial">
                 부분완료
+              </span>
+              <span v-else class="status-badge no-data">
+                데이터 없음
               </span>
             </td>
           </tr>
@@ -67,9 +83,12 @@ interface KpiResult {
 
 const props = defineProps<{
   results: KpiResult[];
+  originalFileName?: string;
+  rawData?: any[];
 }>();
 
 const displayLimit = ref(20);
+const downloading = ref(false);
 
 const displayResults = computed(() => {
   return props.results.slice(0, displayLimit.value);
@@ -79,14 +98,65 @@ const showMore = () => {
   displayLimit.value += 20;
 };
 
+// 유니패스 데이터 완료 여부 판단 (메일 수신 시간은 선택적)
 const isComplete = (result: KpiResult): boolean => {
   return !!(
-    result.mailReceiveTime &&
     result.lowerDeclAcceptTime &&
     result.warehouseEntryTime &&
     result.importDeclTime &&
     result.importAcceptTime
   );
+};
+
+// 부분 완료 여부 판단 (유니패스 데이터 일부만 있는 경우)
+const isPartial = (result: KpiResult): boolean => {
+  const hasAnyUnipassData = !!(
+    result.lowerDeclAcceptTime ||
+    result.warehouseEntryTime ||
+    result.importDeclTime ||
+    result.importAcceptTime
+  );
+  return hasAnyUnipassData && !isComplete(result);
+};
+
+// Excel 다운로드 기능
+const downloadExcel = async () => {
+  downloading.value = true;
+  
+  try {
+    const response = await fetch('/api/kpi/export?format=xlsx', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        results: props.results,
+        originalFileName: props.originalFileName,
+        rawData: props.rawData
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('다운로드 실패');
+    }
+    
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    
+    const timestamp = new Date().toISOString().split('T')[0];
+    a.download = `KPI_결과_${timestamp}.xlsx`;
+    
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+  } catch (err: any) {
+    console.error('Excel 다운로드 오류:', err);
+    alert('Excel 다운로드 중 오류가 발생했습니다.');
+  } finally {
+    downloading.value = false;
+  }
 };
 </script>
 
@@ -106,6 +176,12 @@ const isComplete = (result: KpiResult): boolean => {
   padding: 20px 24px;
   border-bottom: 1px solid #e5e7eb;
   background: #f9fafb;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .table-header h3 {
@@ -198,6 +274,11 @@ td {
   color: #dc2626;
 }
 
+.status-badge.no-data {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
 .table-footer {
   padding: 16px;
   text-align: center;
@@ -221,5 +302,37 @@ td {
   background: #3b82f6;
   color: white;
   transform: translateY(-1px);
+}
+
+.excel-download-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.excel-download-btn:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.excel-download-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.excel-download-btn .icon {
+  width: 16px;
+  height: 16px;
 }
 </style>

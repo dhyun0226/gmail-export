@@ -142,8 +142,8 @@ export async function fetchMultipleUnipassData(
 ): Promise<Map<string, UnipassTimeData>> {
   const resultMap = new Map<string, UnipassTimeData>();
   
-  // 병렬 처리 (최대 5개씩)
-  const batchSize = 5;
+  // 병렬 처리 (최대 20개씩 - 대량 처리 최적화)
+  const batchSize = 20;
   for (let i = 0; i < blNumbers.length; i += batchSize) {
     const batch = blNumbers.slice(i, i + batchSize);
     
@@ -165,9 +165,9 @@ export async function fetchMultipleUnipassData(
       }
     });
     
-    // 다음 배치 전 잠시 대기 (API 부하 방지)
+    // 다음 배치 전 잠시 대기 (API 부하 방지 - 최적화된 시간)
     if (i + batchSize < blNumbers.length) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 200));
     }
   }
   

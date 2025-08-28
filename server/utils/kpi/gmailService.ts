@@ -1,4 +1,5 @@
 import moment from 'moment-timezone';
+import { extractBlNumber } from '../blExtractor';
 import type { GmailData } from './types';
 
 /**
@@ -56,6 +57,16 @@ export async function searchDHLMailByBL(
       return {};
     }
     
+    // 제목에서 BL 번호 추출하여 검증
+    const extractedBL = extractBlNumber(subject, sender);
+    if (extractedBL !== blNumber) {
+      console.log(`[KPI Gmail] BL mismatch - searched: ${blNumber}, extracted: ${extractedBL} from subject: ${subject}`);
+      // BL이 일치하지 않지만, 제목에 해당 BL이 포함되어 있다면 허용
+      if (!subject.includes(blNumber)) {
+        return {};
+      }
+    }
+    
     // 한국 시간으로 변환
     const date = moment(dateHeader).tz('Asia/Seoul');
     const mailReceiveTime = date.format('YYYY-MM-DD HH:mm');
@@ -91,8 +102,8 @@ export async function searchMultipleDHLMails(
       const mailData = await searchDHLMailByBL(gmail, blNumber, startDate, endDate);
       resultMap.set(blNumber, mailData);
       
-      // API 제한 방지를 위한 짧은 딜레이
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // API 제한 방지를 위한 짧은 딜레이 (최적화)
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       console.error(`[KPI Gmail] Failed to search for BL ${blNumber}:`, error);
       resultMap.set(blNumber, {});
@@ -129,38 +140,54 @@ export async function getAllDHLMails(
     const messages = response.data.messages || [];
     console.log(`[KPI Gmail] Found ${messages.length} DHL mails`);
     
-    // 각 메일 처리
-    for (const message of messages) {
-      try {
-        const detail = await gmail.users.messages.get({
-          userId: 'me',
-          id: message.id!,
-          format: 'full'
-        });
-        
-        const headers = detail.data.payload?.headers || [];
-        const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
-        const dateHeader = headers.find((h: any) => h.name === 'Date')?.value || '';
-        const sender = headers.find((h: any) => h.name === 'From')?.value || '';
-        
-        // BL 번호 추출 (제목에서)
-        const blMatch = subject.match(/\b[A-Z0-9]{10,20}\b/g);
-        if (blMatch) {
-          for (const blNumber of blMatch) {
+    // 각 메일 병렬 처리 (20개씩)
+    const batchSize = 20;
+    for (let i = 0; i < messages.length; i += batchSize) {
+      const batch = messages.slice(i, i + batchSize);
+      
+      // 배치 내 메일들 병렬 처리
+      const batchPromises = batch.map(async (message) => {
+        try {
+          const detail = await gmail.users.messages.get({
+            userId: 'me',
+            id: message.id!,
+            format: 'metadata',
+            metadataHeaders: ['Subject', 'From', 'Date']
+          });
+          
+          const headers = detail.data.payload?.headers || [];
+          const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
+          const dateHeader = headers.find((h: any) => h.name === 'Date')?.value || '';
+          const sender = headers.find((h: any) => h.name === 'From')?.value || '';
+          
+          // BL 번호 추출 (blExtractor 사용으로 정확도 향상)
+          const blNumber = extractBlNumber(subject, sender);
+          if (blNumber && blNumber !== 'N/A') {
             const date = moment(dateHeader).tz('Asia/Seoul');
-            resultMap.set(blNumber, {
-              mailReceiveTime: date.format('YYYY-MM-DD HH:mm'),
-              sender,
-              subject
-            });
+            
+            // 이미 존재하는 BL이면 최신 메일로 업데이트
+            const existingData = resultMap.get(blNumber);
+            if (!existingData || date.isAfter(moment(existingData.mailReceiveTime))) {
+              resultMap.set(blNumber, {
+                mailReceiveTime: date.format('YYYY-MM-DD HH:mm'),
+                sender,
+                subject
+              });
+              console.log(`[KPI Gmail] Found BL ${blNumber} from: ${subject}`);
+            }
           }
+          
+        } catch (error) {
+          console.error(`[KPI Gmail] Error processing message ${message.id}:`, error);
         }
-        
-        // API 제한 방지
+      });
+      
+      // 배치 완료 대기
+      await Promise.all(batchPromises);
+      
+      // 다음 배치 전 짧은 대기 (API 제한 방지)
+      if (i + batchSize < messages.length) {
         await new Promise(resolve => setTimeout(resolve, 100));
-        
-      } catch (error) {
-        console.error(`[KPI Gmail] Error processing message ${message.id}:`, error);
       }
     }
     

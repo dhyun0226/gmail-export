@@ -31,23 +31,26 @@ export default defineEventHandler(async (event) => {
 
     // [핵심] 기존 코드의 BL 번호 추출 로직 적용
     const blNumbers: string[] = []
+    const rawData: any[] = []
     // 헤더 행(1행)을 제외하고 C열 데이터 추출
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i] as any
       const blNumber = row['C']?.toString().trim()
       if (blNumber) {
         blNumbers.push(blNumber)
+        rawData.push(row) // 원본 데이터도 저장
       }
     }
 
     console.log(`[API] Successfully parsed and extracted ${blNumbers.length} BL numbers.`)
 
-    // 최종적으로 BL번호 리스트를 포함하여 반환
+    // 최종적으로 BL번호 리스트와 원본 데이터를 포함하여 반환
     return {
       success: true,
       fileName: file.filename || 'unknown.xlsx',
       rowCount: blNumbers.length,
-      blNumbers: [...new Set(blNumbers)] // 중복 제거
+      blNumbers: [...new Set(blNumbers)], // 중복 제거
+      rawData: rawData // 원본 데이터 추가
     }
 
   } catch (err: any) {
