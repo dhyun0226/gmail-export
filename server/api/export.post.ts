@@ -189,24 +189,19 @@ export default defineEventHandler(async (event) => {
     return csvContent;
     
   } else {
-    // Excel 생성 (기존 로직)
+    // Excel 생성 - 화면과 동일한 형식으로
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Gmail Export');
     
-    // 헤더 설정
+    // 헤더 설정 - 화면 테이블과 동일
     worksheet.columns = [
-      { header: 'SCAC', key: 'scac', width: 10 },
-      { header: 'SCAC TRACKING#', key: 'scacTracking', width: 20 },
-      { header: 'HAWB', key: 'hawb', width: 20 },
-      { header: 'EID/XID', key: 'eidXid', width: 15 },
-      { header: 'MILESTONE', key: 'milestone', width: 25 },
-      { header: 'LOCAL DATE', key: 'localDate', width: 15 },
-      { header: 'LOCAL TIME', key: 'localTime', width: 15 },
-      { header: 'POD Signature', key: 'podSignature', width: 15 },
-      { header: 'CITY', key: 'city', width: 15 },
-      { header: 'STATE', key: 'state', width: 10 },
-      { header: 'COUNTRY', key: 'country', width: 12 },
-      { header: 'GMT OFFSET', key: 'gmtOffset', width: 12 }
+      { header: '제목', key: 'subject', width: 40 },
+      { header: 'B/L 번호', key: 'blNumber', width: 20 },
+      { header: 'Tracking 번호', key: 'trackingNumber', width: 20 },
+      { header: '통관접수시간', key: 'acceptanceTime', width: 20 },
+      { header: '수리시간', key: 'clearanceTime', width: 20 },
+      { header: '메일 수신날짜', key: 'date', width: 15 },
+      { header: '메일 수신 시간', key: 'time', width: 15 }
     ];
     
     // 헤더 스타일
@@ -217,10 +212,17 @@ export default defineEventHandler(async (event) => {
       fgColor: { argb: 'FFE0E0E0' }
     };
     
-    // 데이터 추가
-    const rows = generateRows(emails);
-    for (const row of rows) {
-      worksheet.addRow(row);
+    // 데이터 추가 - 화면과 동일한 형식
+    for (const email of emails) {
+      worksheet.addRow({
+        subject: email.subject,
+        blNumber: email.blNumber,
+        trackingNumber: email.trackingNumber || 'N/A',
+        acceptanceTime: email.acceptanceTime || '-',
+        clearanceTime: email.clearanceTime || '-',
+        date: email.date,
+        time: email.time
+      });
     }
     
     // 모든 셀에 테두리 추가
