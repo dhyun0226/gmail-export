@@ -172,7 +172,11 @@ export default defineEventHandler(async (event) => {
         '스케줄 지연 안내', '원산지 확인요청'
       ];
 
-      const shouldBeFiltered = keywordsToFilter.some(keyword => subject.includes(keyword));
+      // RE: 답장 메일 필터링 (Re:CNW 제외)
+      const hasReplyPrefix = /\bRE:/i.test(subject);
+      const hasReCNW = /Re:CNW/i.test(subject);
+      
+      const shouldBeFiltered = keywordsToFilter.some(keyword => subject.includes(keyword)) || (hasReplyPrefix && !hasReCNW);
       if (shouldBeFiltered) {
         continue; // 이 이메일은 건너뜁니다.
       }
