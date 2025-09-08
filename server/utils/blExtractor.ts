@@ -2,6 +2,9 @@
 // B/L 번호 추출을 위한 정규식 패턴 목록
 // 순서가 중요합니다. 더 구체적인 패턴을 앞에 배치합니다.
 const patterns = [
+  // 항공수입/수입 관련 # 기호 다음 BL 번호 패턴 (예: 항공수입 # ORI07609092)
+  { name: 'IMPORT_HASH_PREFIX', regex: /(?:항공수입)\s*#\s*([A-Z0-9]+)(?:\s|$)/ },
+  
   // EI 패턴들 (| 문자 제거를 위해 더 명확한 패턴)
   { name: 'EI_HB', regex: /HB:\s*(\d+)(?:\||$|\s)/ },
   { name: 'EI_HAWB_HASH', regex: /HAWB#\s*(\d+)(?:\||$|\s)/ },

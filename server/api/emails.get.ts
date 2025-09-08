@@ -172,11 +172,11 @@ export default defineEventHandler(async (event) => {
         '스케줄 지연 안내', '원산지 확인요청'
       ];
 
-      // RE: 답장 메일 필터링 (Re:CNW 제외)
+      // RE: 답장 메일 필터링 (++CNEE++ CNW Pre-Alert 제외)
       const hasReplyPrefix = /\bRE:/i.test(subject);
-      const hasReCNW = /Re:CNW/i.test(subject);
+      const hasCneeCnwPreAlert = /RE:\s*\+\+CNEE\+\+.*CNW Pre-Alert/i.test(subject);
       
-      const shouldBeFiltered = keywordsToFilter.some(keyword => subject.includes(keyword)) || (hasReplyPrefix && !hasReCNW);
+      const shouldBeFiltered = keywordsToFilter.some(keyword => subject.includes(keyword)) || (hasReplyPrefix && !hasCneeCnwPreAlert);
       if (shouldBeFiltered) {
         continue; // 이 이메일은 건너뜁니다.
       }

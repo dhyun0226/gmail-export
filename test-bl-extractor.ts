@@ -67,6 +67,13 @@ const testCases = [
     subject: '++CNEE++ CNW Pre-Alert - 11477525 - UA805 JUL-25ICN - 016-78537896 - CARGOHOLIC INTERNATIONAL KOREA - SFO – ICN',
     expected: '11477525',
     description: 'CNW 패턴'
+  },
+  
+  // 6. # 기호 패턴 테스트
+  {
+    subject: 'Applied Materials Korea 이스라엘 항공수입 # ORI07609092',
+    expected: 'ORI07609092',
+    description: '# 기호 다음 BL 번호 패턴'
   }
 ];
 
