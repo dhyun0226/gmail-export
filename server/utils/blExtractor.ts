@@ -18,7 +18,8 @@ const patterns = [
   // DHL 패턴 (숫자만 추출)
   { name: 'DHL', regex: /DHL\s+(\d+)/ },
   
-  // CNW 패턴
+  // CNW 패턴들
+  { name: 'CNEE_CNW_HASH', regex: /\+\+CNEE\+\+\s+CNW\s*#\s*(\d+)/ },
   { name: 'CNW', regex: /CNW Pre-Alert\s*-\s*(\d+)/ },
 
   // CEVA 패턴
