@@ -78,12 +78,22 @@
       <div class="flex items-center justify-between mb-3">
         <span class="text-green-700">{{ excelResult.message }}</span>
       </div>
-      <button
-        @click="downloadResult"
-        class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition"
-      >
-        결과 다운로드
-      </button>
+      <div class="flex gap-2">
+        <button
+          @click="downloadResult('xlsx')"
+          :disabled="downloading === 'xlsx'"
+          class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition disabled:bg-gray-400"
+        >
+          {{ downloading === 'xlsx' ? '다운로드 중...' : '엑셀 다운로드' }}
+        </button>
+        <button
+          @click="downloadResult('csv')"
+          :disabled="downloading === 'csv'"
+          class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:bg-gray-400"
+        >
+          {{ downloading === 'csv' ? '다운로드 중...' : 'CSV 다운로드' }}
+        </button>
+      </div>
       <button
         @click="resetAll"
         class="w-full mt-2 text-gray-600 text-sm hover:text-gray-800 transition"
@@ -104,6 +114,7 @@ const blYear = ref(new Date().getFullYear().toString());
 const isDragging = ref(false);
 const elapsedTime = ref(0);
 const timerInterval = ref<NodeJS.Timeout | null>(null);
+const downloading = ref<false | 'xlsx' | 'csv'>(false);
 
 const emit = defineEmits<{
   error: [message: string]
@@ -223,31 +234,44 @@ const processExcel = async () => {
 };
 
 // 결과 파일 다운로드
-const downloadResult = async () => {
-  if (!excelResult.value?.fileData) return;
-  
+const downloadResult = async (format: 'xlsx' | 'csv') => {
+  if (!excelResult.value) return;
+
+  downloading.value = format;
+
   try {
-    const response = await fetch('/api/excel/download', {
+    const body: any = {
+      format: format
+    };
+
+    // CSV인 경우 results 데이터 사용, Excel인 경우 fileData 사용
+    if (format === 'csv') {
+      body.data = excelResult.value.results;
+    } else {
+      body.fileData = excelResult.value.fileData;
+    }
+
+    const response = await fetch('/api/excel/export', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
-        fileData: excelResult.value.fileData 
-      }),
+      body: JSON.stringify(body),
     });
-    
+
     if (!response.ok) throw new Error('다운로드에 실패했습니다.');
-    
+
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `유니패스_조회결과_${new Date().toISOString().split('T')[0]}.xlsx`;
+    a.download = `유니패스_조회결과_${new Date().toISOString().split('T')[0]}.${format === 'csv' ? 'csv' : 'xlsx'}`;
     a.click();
     window.URL.revokeObjectURL(url);
   } catch (err: any) {
-    emit('error', '파일 다운로드 중 오류가 발생했습니다.');
+    emit('error', `${format.toUpperCase()} 다운로드 중 오류가 발생했습니다.`);
+  } finally {
+    downloading.value = false;
   }
 };
 

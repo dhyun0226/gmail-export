@@ -252,6 +252,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       message: `${results.length}개의 BL번호에 대한 유니패스 조회가 완료되었습니다.`,
       fileData: base64Data,
+      results: results, // CSV 변환을 위한 원본 데이터 추가
       totalCount: results.length,
       processedCount: results.filter(r => r.acceptanceDate || r.clearanceDate).length
     };
