@@ -1,5 +1,5 @@
 import moment from 'moment-timezone';
-import { extractBlNumber } from '../blExtractor';
+import { extractBlNumber } from './kpiBlExtractor';
 import type { GmailData } from './types';
 
 /**
@@ -38,15 +38,30 @@ export async function searchDHLMailByBL(
       return {};
     }
     
-    // 첫 번째 메일의 상세 정보 가져오기 (가장 최근 메일)
-    const detail = await gmail.users.messages.get({
-      userId: 'me',
-      id: messages[0].id!,
-      format: 'metadata',
-      metadataHeaders: ['From', 'Subject', 'Date']
+    // 모든 후보 메일의 상세 정보 가져오기
+    const messageDetails = await Promise.all(
+      messages.map(message => 
+        gmail.users.messages.get({
+          userId: 'me',
+          id: message.id!,
+          format: 'metadata',
+          metadataHeaders: ['From', 'Subject', 'Date']
+        })
+      )
+    );
+
+    // 답장이 아닌 메일을 우선적으로 선택 (정규식 사용)
+    let bestDetail = messageDetails.find(detail => {
+      const subject = detail.data.payload?.headers?.find((h: any) => h.name === 'Subject')?.value || '';
+      return !/\bRE:/i.test(subject);
     });
-    
-    const headers = detail.data.payload?.headers || [];
+
+    // 답장이 아닌 메일이 없으면, 가장 최근 메일(첫 번째)을 사용
+    if (!bestDetail) {
+      bestDetail = messageDetails[0];
+    }
+
+    const headers = bestDetail.data.payload?.headers || [];
     const sender = headers.find((h: any) => h.name === 'From')?.value || '';
     const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
     const dateHeader = headers.find((h: any) => h.name === 'Date')?.value || '';
@@ -114,7 +129,7 @@ export async function searchMultipleDHLMails(
 }
 
 /**
- * 날짜 범위로 모든 DHL 메일 조회
+ * 날짜 범위로 모든 DHL 메일 조회 (페이지네이션 적용)
  */
 export async function getAllDHLMails(
   gmail: any,
@@ -130,20 +145,32 @@ export async function getAllDHLMails(
     const query = `from:dhl after:${startTimestamp} before:${endTimestamp}`;
     
     console.log(`[KPI Gmail] Fetching all DHL mails with query:`, query);
+
+    let pageToken: string | undefined | null = undefined;
+    const allMessages: any[] = [];
+
+    // 페이지네이션 루프: 다음 페이지 토큰이 없을 때까지 모든 메일 ID를 가져옴
+    do {
+      const response = await gmail.users.messages.list({
+        userId: 'me',
+        q: query,
+        maxResults: 500,
+        pageToken: pageToken,
+      });
+
+      const messages = response.data.messages || [];
+      allMessages.push(...messages);
+
+      pageToken = response.data.nextPageToken;
+
+    } while (pageToken);
     
-    const response = await gmail.users.messages.list({
-      userId: 'me',
-      q: query,
-      maxResults: 500
-    });
-    
-    const messages = response.data.messages || [];
-    console.log(`[KPI Gmail] Found ${messages.length} DHL mails`);
+    console.log(`[KPI Gmail] Found a total of ${allMessages.length} DHL mails across all pages.`);
     
     // 각 메일 병렬 처리 (20개씩)
     const batchSize = 20;
-    for (let i = 0; i < messages.length; i += batchSize) {
-      const batch = messages.slice(i, i + batchSize);
+    for (let i = 0; i < allMessages.length; i += batchSize) {
+      const batch = allMessages.slice(i, i + batchSize);
       
       // 배치 내 메일들 병렬 처리
       const batchPromises = batch.map(async (message) => {
@@ -157,6 +184,12 @@ export async function getAllDHLMails(
           
           const headers = detail.data.payload?.headers || [];
           const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
+
+          // 답장 메일(RE:)은 건너뛰기 (정규식 사용)
+          if (/\bRE:/i.test(subject)) {
+            return;
+          }
+
           const dateHeader = headers.find((h: any) => h.name === 'Date')?.value || '';
           const sender = headers.find((h: any) => h.name === 'From')?.value || '';
           
@@ -186,7 +219,7 @@ export async function getAllDHLMails(
       await Promise.all(batchPromises);
       
       // 다음 배치 전 짧은 대기 (API 제한 방지)
-      if (i + batchSize < messages.length) {
+      if (i + batchSize < allMessages.length) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
     }
