@@ -7,7 +7,7 @@ const patterns = [
   
   // EI 패턴들 (| 문자 제거를 위해 더 명확한 패턴)
   { name: 'EI_HB', regex: /HB:\s*(\d+)(?:\||$|\s)/ },
-  { name: 'EI_HAWB_HASH', regex: /HAWB#\s*(\d+)(?:\||$|\s)/ },
+  { name: 'EI_HAWB_HASH', regex: /HAWB#\s*([A-Z0-9]+)(?:\||$|\s)/ },
   
   // HAWB 콜론 패턴 (알파벳+숫자 조합 포함)
   { name: 'EI_HAWB_COLON', regex: /HAWB:\s*([A-Z0-9]+)(?:\s|$)/ },
@@ -18,6 +18,9 @@ const patterns = [
   // DHL 패턴 (숫자만 추출)
   { name: 'DHL', regex: /DHL\s+(\d+)/ },
   
+  // DGF 응답 메일 패턴 (예: H687676)
+  { name: 'DGF_REPLY_PATTERN', regex: /\b([A-Z]\d{6,})\b/ },
+
   // CNW 패턴들
   { name: 'CNEE_CNW_HASH', regex: /\+\+CNEE\+\+\s+CNW\s*#\s*(\d+)/ },
   { name: 'CNW', regex: /CNW Pre-Alert\s*-\s*(\d+)/ },
@@ -25,6 +28,9 @@ const patterns = [
   // CEVA 패턴
   { name: 'CEVA', regex: /Shipment No\s+(\S+)/ },
   
+  // CEVA HAWB N° 패턴 (예: ...HAWB N° WEB9CPRC1549)
+  { name: 'CEVA_HAWB_NO', regex: /HAWB N°\s+([A-Z0-9]+)$/ },
+
   // 일반적인 AWB 패턴 (마지막에 배치)
   { name: 'AWB', regex: /AWB\s+(\S+)/ },
 ];
