@@ -168,7 +168,7 @@ export default defineEventHandler(async (event) => {
         '순중량 정정요청', '미결안내/용도설명서 요청', 'PENDING LIST', 
         '미반출 내역 안내의 건', 'Microsoft OneDrive 확인 코드', '운송리스트 [TOP Customs]',
         'check in Korea HTS', 'BOM 전달', '가산금적용여부문의', '이고요청',
-        '중량문의', '통관 지연 사유 문의', '수입신고필증 전달건', '입항통보건 리스트 안내', '입고요청', 'RATED B/L 요청', 
+        '중량문의', '중량 문의', '통관 지연 사유 문의', '수입신고필증 전달건', '입항통보건 리스트 안내', '입고요청', 'RATED B/L 요청', 
         '스케줄 지연 안내', '원산지 확인요청'
       ];
 
