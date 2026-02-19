@@ -60,15 +60,43 @@
             </button>
           </div>
 
-          <!-- 탭 네비게이션 -->
-          <div class="border-b border-gray-200 mb-8">
+          <!-- 상위 탭 네비게이션 (마일스톤 / KPI) -->
+          <div class="border-b-2 border-gray-200 mb-6">
+            <nav class="-mb-px flex space-x-2">
+              <button
+                @click="mainTab = 'milestone'"
+                :class="[
+                  'py-3 px-6 font-bold text-base rounded-t-lg transition-all duration-200',
+                  mainTab === 'milestone'
+                    ? 'bg-primary-dark text-white'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                ]"
+              >
+                마일스톤
+              </button>
+              <button
+                @click="mainTab = 'kpi'"
+                :class="[
+                  'py-3 px-6 font-bold text-base rounded-t-lg transition-all duration-200',
+                  mainTab === 'kpi'
+                    ? 'bg-primary-dark text-white'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                ]"
+              >
+                KPI
+              </button>
+            </nav>
+          </div>
+
+          <!-- 마일스톤: 하위 탭 네비게이션 -->
+          <div v-if="mainTab === 'milestone'" class="border-b border-gray-200 mb-8">
             <nav class="-mb-px flex space-x-8">
               <button
                 @click="activeTab = 'email'"
                 :class="[
                   'py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200',
-                  activeTab === 'email' 
-                    ? 'border-primary-dark text-primary-dark' 
+                  activeTab === 'email'
+                    ? 'border-primary-dark text-primary-dark'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 ]"
               >
@@ -78,8 +106,8 @@
                 @click="activeTab = 'excel'"
                 :class="[
                   'py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200',
-                  activeTab === 'excel' 
-                    ? 'border-primary-dark text-primary-dark' 
+                  activeTab === 'excel'
+                    ? 'border-primary-dark text-primary-dark'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 ]"
               >
@@ -90,8 +118,11 @@
 
           <!-- 탭 컨텐츠 -->
           <div>
-            <EmailTab v-if="activeTab === 'email'" @error="handleError" />
-            <ExcelUploadTab v-if="activeTab === 'excel'" @error="handleError" />
+            <template v-if="mainTab === 'milestone'">
+              <EmailTab v-if="activeTab === 'email'" @error="handleError" />
+              <ExcelUploadTab v-if="activeTab === 'excel'" @error="handleError" />
+            </template>
+            <KpiTab v-if="mainTab === 'kpi'" @error="handleError" />
           </div>
         </div>
 
@@ -111,10 +142,12 @@
 import { ref, onMounted } from "vue";
 import EmailTab from "~/components/EmailTab.vue";
 import ExcelUploadTab from "~/components/ExcelUploadTab.vue";
+import KpiTab from "~/components/KpiTab.vue";
 
 const isAuthenticated = ref(false);
 const userEmail = ref("");
 const error = ref("");
+const mainTab = ref('milestone');
 const activeTab = ref('email');
 
 // 사용자 정보 확인
