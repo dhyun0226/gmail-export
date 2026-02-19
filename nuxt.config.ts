@@ -24,6 +24,9 @@ export default defineNuxtConfig({
     googleClientId: process.env.GOOGLE_CLIENT_ID || '',
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || '',
+    aiProvider: process.env.AI_PROVIDER || 'gemini',
+    geminiApiKey: process.env.GEMINI_API_KEY || '',
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
     public: {
       appUrl: process.env.PUBLIC_APP_URL || 'http://localhost:3000'
     }

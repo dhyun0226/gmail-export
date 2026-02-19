@@ -14,7 +14,7 @@ export function getAuthUrl(client: any) {
   const scopes = [
     'https://www.googleapis.com/auth/gmail.readonly',
     'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/drive.readonly'
+    'https://www.googleapis.com/auth/drive.file'
   ];
 
   return client.generateAuthUrl({

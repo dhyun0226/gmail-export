@@ -75,6 +75,17 @@
                 마일스톤
               </button>
               <button
+                @click="mainTab = 'docextract'"
+                :class="[
+                  'py-3 px-6 font-bold text-base rounded-t-lg transition-all duration-200',
+                  mainTab === 'docextract'
+                    ? 'bg-primary-dark text-white'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                ]"
+              >
+                문서추출
+              </button>
+              <button
                 @click="mainTab = 'kpi'"
                 :class="[
                   'py-3 px-6 font-bold text-base rounded-t-lg transition-all duration-200',
@@ -122,6 +133,7 @@
               <EmailTab v-if="activeTab === 'email'" @error="handleError" />
               <ExcelUploadTab v-if="activeTab === 'excel'" @error="handleError" />
             </template>
+            <DocExtractTab v-if="mainTab === 'docextract'" @error="handleError" />
             <KpiTab v-if="mainTab === 'kpi'" @error="handleError" />
           </div>
         </div>
@@ -143,6 +155,7 @@ import { ref, onMounted } from "vue";
 import EmailTab from "~/components/EmailTab.vue";
 import ExcelUploadTab from "~/components/ExcelUploadTab.vue";
 import KpiTab from "~/components/KpiTab.vue";
+import DocExtractTab from "~/components/docextract/DocExtractTab.vue";
 
 const isAuthenticated = ref(false);
 const userEmail = ref("");

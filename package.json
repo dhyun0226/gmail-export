@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@nuxtjs/tailwindcss": "^6.8.0",
     "@types/formidable": "^3.4.5",
     "exceljs": "^4.4.0",
