@@ -43,6 +43,8 @@
             <th class="px-4 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">수량</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">중량</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">금액</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">환율</th>
+            <th class="px-4 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">원화금액</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">HS코드</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">원산지</th>
             <th class="px-4 py-3 text-left text-xs font-semibold text-text-light uppercase tracking-wider">송하인</th>
@@ -79,6 +81,13 @@
             <td class="px-4 py-3 text-sm text-text-light">{{ result.quantity || '-' }}</td>
             <td class="px-4 py-3 text-sm text-text-light">{{ result.weight || '-' }}</td>
             <td class="px-4 py-3 text-sm text-text-light">{{ result.amount || '-' }}</td>
+            <td class="px-4 py-3 text-sm text-text-light">
+              <span v-if="result.exchangeRate">{{ result.currency }} {{ result.exchangeRate }}</span>
+              <span v-else class="text-gray-400">-</span>
+            </td>
+            <td class="px-4 py-3 text-sm font-medium text-blue-700">
+              {{ result.amountKRW || '-' }}
+            </td>
             <td class="px-4 py-3 text-sm text-text-light">{{ result.hsCode || '-' }}</td>
             <td class="px-4 py-3 text-sm text-text-light">{{ result.countryOfOrigin || '-' }}</td>
             <td class="px-4 py-3 text-sm text-text-light max-w-[150px] truncate" :title="result.shipper">{{ result.shipper || '-' }}</td>
@@ -107,6 +116,10 @@ interface ExtractedResult {
   quantity: string;
   weight: string;
   amount: string;
+  currency?: string;
+  amountValue?: number;
+  exchangeRate?: number;
+  amountKRW?: string;
   hsCode: string;
   countryOfOrigin: string;
   shipper: string;

@@ -31,7 +31,11 @@ export interface ExtractedDocumentData {
   productName: string;        // 품명
   quantity: string;           // 수량
   weight: string;             // 중량
-  amount: string;             // 금액
+  amount: string;             // 금액 (원본, 예: "USD 1,234.56")
+  currency?: string;          // 통화부호 (USD, EUR 등)
+  amountValue?: number;       // 숫자만 파싱한 금액
+  exchangeRate?: number;      // 적용 관세환율
+  amountKRW?: string;         // 원화 환산 금액
   hsCode: string;             // HS코드
   countryOfOrigin: string;    // 원산지
   shipper: string;            // 송하인

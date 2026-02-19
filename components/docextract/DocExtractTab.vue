@@ -97,6 +97,10 @@ interface ExtractedResult {
   quantity: string;
   weight: string;
   amount: string;
+  currency?: string;
+  amountValue?: number;
+  exchangeRate?: number;
+  amountKRW?: string;
   hsCode: string;
   countryOfOrigin: string;
   shipper: string;
@@ -241,7 +245,11 @@ const startExtraction = async (limit?: number) => {
       processedCount.value = i + 1;
     }
 
-    // 3단계: 통계 계산
+    // 3단계: 환율 조회 (1회) 후 원화 환산 일괄 적용
+    currentStep.value = '환율 조회 중...';
+    await applyExchangeRates();
+
+    // 4단계: 통계 계산
     const uniqueBls = new Set(extractionResults.value.map(r => r.blNumber).filter(bl => bl && bl !== 'N/A'));
     statistics.value = {
       totalEmails: fetchRes.emails.length,
@@ -321,6 +329,70 @@ const uploadToDrive = async () => {
     emit('error', err.data?.statusMessage || 'Drive 업로드 중 오류가 발생했습니다.');
   } finally {
     uploading.value = false;
+  }
+};
+
+/**
+ * 금액 문자열에서 통화부호와 숫자를 파싱
+ * 예: "USD 1,234.56" → { currency: "USD", value: 1234.56 }
+ */
+function parseAmount(amount: string): { currency: string; value: number } | null {
+  if (!amount) return null;
+  const match = amount.match(/([A-Z]{3})\s*([\d,]+\.?\d*)/i)
+    || amount.match(/([\d,]+\.?\d*)\s*([A-Z]{3})/i);
+  if (!match) return null;
+
+  let currency: string;
+  let numStr: string;
+  if (/^[A-Z]/i.test(match[1]!)) {
+    currency = match[1]!.toUpperCase();
+    numStr = match[2]!;
+  } else {
+    numStr = match[1]!;
+    currency = match[2]!.toUpperCase();
+  }
+  const value = parseFloat(numStr.replace(/,/g, ''));
+  if (isNaN(value)) return null;
+  return { currency, value };
+}
+
+/**
+ * 환율 1회 조회 후 전체 결과에 일괄 적용
+ */
+const applyExchangeRates = async () => {
+  try {
+    const today = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dateStr = `${today.getFullYear()}${pad(today.getMonth() + 1)}${pad(today.getDate())}`;
+
+    const res = await $fetch<{ rates: { currSgn: string; fxrt: number }[] }>('/api/unipass/exchange-rate', {
+      params: { date: dateStr, imexTp: '2' }
+    });
+
+    // 통화부호 → 환율 맵 생성
+    const rateMap = new Map<string, number>();
+    for (const r of res.rates) {
+      rateMap.set(r.currSgn, r.fxrt);
+    }
+
+    // 각 결과에 환율 적용
+    for (const result of extractionResults.value) {
+      if (!result.amount || result.error) continue;
+      const parsed = parseAmount(result.amount);
+      if (!parsed || parsed.currency === 'KRW') continue;
+
+      result.currency = parsed.currency;
+      result.amountValue = parsed.value;
+
+      const rate = rateMap.get(parsed.currency);
+      if (rate) {
+        result.exchangeRate = rate;
+        const krw = Math.round(parsed.value * rate);
+        result.amountKRW = krw.toLocaleString('ko-KR') + ' KRW';
+      }
+    }
+  } catch (err) {
+    console.warn('[DocExtract] Exchange rate lookup failed:', err);
   }
 };
 

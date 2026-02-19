@@ -3,7 +3,7 @@
     <div class="container mx-auto px-4 py-8 max-w-6xl">
       <div class="flex items-center justify-center mb-10">
         <img src="/logo.png" alt="Logo" class="h-12 w-12" />
-        <h1 class="text-4xl font-extrabold text-primary-dark">TOP Milestone</h1>
+        <h1 class="text-4xl font-extrabold text-primary-dark">관세법인 정상</h1>
       </div>
 
       <!-- 로그인 상태가 아닐 때 -->
@@ -96,6 +96,17 @@
               >
                 KPI
               </button>
+              <button
+                @click="mainTab = 'exchangeRate'"
+                :class="[
+                  'py-3 px-6 font-bold text-base rounded-t-lg transition-all duration-200',
+                  mainTab === 'exchangeRate'
+                    ? 'bg-primary-dark text-white'
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'
+                ]"
+              >
+                환율
+              </button>
             </nav>
           </div>
 
@@ -135,6 +146,7 @@
             </template>
             <DocExtractTab v-if="mainTab === 'docextract'" @error="handleError" />
             <KpiTab v-if="mainTab === 'kpi'" @error="handleError" />
+            <ExchangeRateTab v-if="mainTab === 'exchangeRate'" @error="handleError" />
           </div>
         </div>
 
@@ -156,6 +168,7 @@ import EmailTab from "~/components/EmailTab.vue";
 import ExcelUploadTab from "~/components/ExcelUploadTab.vue";
 import KpiTab from "~/components/KpiTab.vue";
 import DocExtractTab from "~/components/docextract/DocExtractTab.vue";
+import ExchangeRateTab from "~/components/ExchangeRateTab.vue";
 
 const isAuthenticated = ref(false);
 const userEmail = ref("");

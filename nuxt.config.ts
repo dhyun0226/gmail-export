@@ -6,7 +6,8 @@ export default defineNuxtConfig({
   app: {
     head: {
       link: [
-        { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css' }
+        { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css' },
+        { rel: 'stylesheet', href: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css' }
       ],
       script: [
         { src: 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js', body: true },
@@ -27,6 +28,7 @@ export default defineNuxtConfig({
     aiProvider: process.env.AI_PROVIDER || 'gemini',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+    unipassExchangeRateKey: process.env.UNIPASS_EXCHANGE_RATE_KEY || '',
     public: {
       appUrl: process.env.PUBLIC_APP_URL || 'http://localhost:3000'
     }
