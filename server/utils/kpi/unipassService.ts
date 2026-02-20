@@ -5,7 +5,7 @@ import type { UnipassTimeData, UnipassXMLDetail } from './types';
 /**
  * HTTPS 요청 헬퍼 함수
  */
-function httpsRequest(url: string): Promise<string> {
+export function httpsRequest(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
     console.log('[KPI Unipass] Making request to:', url);
     
@@ -43,7 +43,7 @@ function httpsRequest(url: string): Promise<string> {
 /**
  * 날짜/시간 포맷팅 함수
  */
-function formatDateTime(dateTimeString: string | number): string {
+export function formatDateTime(dateTimeString: string | number): string {
   if (!dateTimeString) return '';
   const s = String(dateTimeString);
   if (s.length < 12) return s;

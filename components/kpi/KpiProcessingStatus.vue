@@ -27,7 +27,8 @@
     </div>
     
     <div v-if="statistics" class="statistics">
-      <div class="stat-grid">
+      <!-- Import 통계 -->
+      <div v-if="mode !== 'export'" class="stat-grid">
         <div class="stat-item">
           <div class="stat-label">전체</div>
           <div class="stat-value">{{ statistics.total }}</div>
@@ -61,6 +62,30 @@
           <div class="stat-value">{{ statistics.withError }}</div>
         </div>
       </div>
+
+      <!-- Export 통계 -->
+      <div v-if="mode === 'export'" class="stat-grid">
+        <div class="stat-item">
+          <div class="stat-label">전체</div>
+          <div class="stat-value">{{ statistics.total }}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">수출신고수리</div>
+          <div class="stat-value">{{ statistics.withExportDeclAccept || 0 }}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">적재완료</div>
+          <div class="stat-value">{{ statistics.withLoadingComplete || 0 }}</div>
+        </div>
+        <div class="stat-item success">
+          <div class="stat-label">완료</div>
+          <div class="stat-value">{{ statistics.complete }}</div>
+        </div>
+        <div class="stat-item error" v-if="statistics.withError > 0">
+          <div class="stat-label">오류</div>
+          <div class="stat-value">{{ statistics.withError }}</div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -81,12 +106,13 @@ interface Statistics {
 
 const props = defineProps<{
   isProcessing: boolean;
-  statistics?: Statistics;
+  statistics?: any;
   currentStep?: string;
   processingTime?: number;
   processedCount?: number;
   totalCount?: number;
   currentPhase?: 'gmail' | 'unipass' | 'complete';
+  mode?: 'import' | 'export';
 }>();
 
 const progressPercent = ref(0);

@@ -2,12 +2,12 @@
   <div class="result-table" v-if="results && results.length > 0">
     <div class="table-header">
       <div class="header-left">
-        <h3>처리 결과</h3>
+        <h3>수출 KPI 결과</h3>
         <span class="result-count">총 {{ results.length }}건</span>
       </div>
-      <button 
+      <button
         v-if="results.length > 0"
-        @click="downloadExcel" 
+        @click="downloadExcel"
         :disabled="downloading"
         class="excel-download-btn"
       >
@@ -17,20 +17,18 @@
         <span>{{ downloading ? '다운로드 중...' : 'Excel 다운로드' }}</span>
       </button>
     </div>
-    
+
     <div class="table-wrapper">
       <table>
         <thead>
           <tr>
             <th>순번</th>
-            <th>B/L 번호</th>
-            <th>메일 수신 시간</th>
-            <th>하기신고수리일시</th>
-            <th>창고반입일시</th>
-            <th>수입신고일시</th>
-            <th>수입신고수리일시</th>
-            <th>Delay Reason</th>
-            <th>Cont/Uncont</th>
+            <th>신고번호</th>
+            <th>세관</th>
+            <th>C/S구분</th>
+            <th>거래구분</th>
+            <th>수출신고수리일시</th>
+            <th>적재완료일시</th>
             <th>Gross</th>
             <th>Net</th>
             <th>상태</th>
@@ -39,26 +37,20 @@
         <tbody>
           <tr v-for="(result, index) in displayResults" :key="index">
             <td class="text-center">{{ index + 1 }}</td>
-            <td class="bl-number">{{ result.blNumber }}</td>
-            <td>{{ result.mailReceiveTime || '' }}</td>
-            <td>{{ result.lowerDeclAcceptTime || '' }}</td>
-            <td>{{ result.warehouseEntryTime || '' }}</td>
-            <td>{{ result.importDeclTime || '' }}</td>
-            <td>{{ result.importAcceptTime || '' }}</td>
-            <td class="delay-reason">{{ result.delayReason || '' }}</td>
-            <td>
-              <span v-if="result.controllable" :class="['cont-badge', result.controllable === 'Uncontrollable' ? 'uncont' : 'cont']">
-                {{ result.controllable }}
+            <td class="bl-number">{{ result.declNumber }}</td>
+            <td>{{ result.customsName || '' }}</td>
+            <td>{{ result.inspectionType || '' }}</td>
+            <td>{{ result.tradeType || '' }}</td>
+            <td>{{ result.exportDeclAcceptTime || '' }}</td>
+            <td>{{ result.loadingCompleteTime || '' }}</td>
+            <td class="text-center">
+              <span v-if="calcGross(result)" :class="['gross-badge', calcGross(result) === 'Y' ? 'yes' : 'no']">
+                {{ calcGross(result) }}
               </span>
             </td>
             <td class="text-center">
-              <span v-if="result.gross" :class="['gross-badge', result.gross === 'Y' ? 'yes' : 'no']">
-                {{ result.gross }}
-              </span>
-            </td>
-            <td class="text-center">
-              <span v-if="result.net" :class="['gross-badge', result.net === 'Y' ? 'yes' : 'no']">
-                {{ result.net }}
+              <span v-if="calcNet(result)" :class="['gross-badge', calcNet(result) === 'Y' ? 'yes' : 'no']">
+                {{ calcNet(result) }}
               </span>
             </td>
             <td>
@@ -79,7 +71,7 @@
         </tbody>
       </table>
     </div>
-    
+
     <div v-if="results.length > displayLimit" class="table-footer">
       <button @click="showMore" class="show-more-btn">
         더 보기 ({{ results.length - displayLimit }}개 남음)
@@ -91,24 +83,19 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 
-interface KpiResult {
-  blNumber: string;
-  mailReceiveTime?: string;
-  lowerDeclAcceptTime?: string;
-  warehouseEntryTime?: string;
-  importDeclTime?: string;
-  importAcceptTime?: string;
-  delayReason?: string;
-  controllable?: string;
-  gross?: string;
-  net?: string;
+interface ExportResult {
+  declNumber: string;
+  customsName?: string;
+  inspectionType?: string;
+  tradeType?: string;
+  exportDeclAcceptTime?: string;
+  loadingCompleteTime?: string;
   error?: string;
 }
 
 const props = defineProps<{
-  results: KpiResult[];
+  results: ExportResult[];
   originalFileName?: string;
-  rawData?: any[];
 }>();
 
 const displayLimit = ref(20);
@@ -122,59 +109,56 @@ const showMore = () => {
   displayLimit.value += 20;
 };
 
-// 유니패스 데이터 완료 여부 판단 (메일 수신 시간은 선택적)
-const isComplete = (result: KpiResult): boolean => {
-  return !!(
-    result.lowerDeclAcceptTime &&
-    result.warehouseEntryTime &&
-    result.importDeclTime &&
-    result.importAcceptTime
-  );
+const calcDiffDays = (end?: string, start?: string): number | null => {
+  if (!end || !start) return null;
+  const e = new Date(end);
+  const s = new Date(start);
+  if (isNaN(e.getTime()) || isNaN(s.getTime())) return null;
+  return (e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24);
 };
 
-// 부분 완료 여부 판단 (유니패스 데이터 일부만 있는 경우)
-const isPartial = (result: KpiResult): boolean => {
-  const hasAnyUnipassData = !!(
-    result.lowerDeclAcceptTime ||
-    result.warehouseEntryTime ||
-    result.importDeclTime ||
-    result.importAcceptTime
-  );
-  return hasAnyUnipassData && !isComplete(result);
+const calcGross = (r: ExportResult): string => {
+  const actual = calcDiffDays(r.loadingCompleteTime, r.exportDeclAcceptTime);
+  if (actual === null) return '';
+  const diff = Math.round((actual - 0.0625) * 10000) / 10000;
+  return diff > 0 ? 'N' : 'Y';
 };
 
-// Excel 다운로드 기능
+const calcNet = (r: ExportResult): string => {
+  return calcGross(r); // 수출은 사유 없으므로 Gross와 동일
+};
+
+const isComplete = (result: ExportResult): boolean => {
+  return !!(result.exportDeclAcceptTime && result.loadingCompleteTime);
+};
+
+const isPartial = (result: ExportResult): boolean => {
+  return !!(result.exportDeclAcceptTime || result.loadingCompleteTime) && !isComplete(result);
+};
+
 const downloadExcel = async () => {
   downloading.value = true;
-  
+
   try {
-    const response = await fetch('/api/kpi/export?format=xlsx', {
+    const response = await fetch('/api/kpi/export?format=xlsx&mode=export', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         results: props.results,
         originalFileName: props.originalFileName,
-        rawData: props.rawData
-      })
+      }),
     });
-    
-    if (!response.ok) {
-      throw new Error('다운로드 실패');
-    }
-    
+
+    if (!response.ok) throw new Error('다운로드 실패');
+
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    
-    const timestamp = new Date().toISOString().split('T')[0];
-    a.download = `KPI_결과_${timestamp}.xlsx`;
-    
+    a.download = `KPI_Export_결과_${new Date().toISOString().split('T')[0]}.xlsx`;
     a.click();
     window.URL.revokeObjectURL(url);
-    
+
   } catch (err: any) {
     console.error('Excel 다운로드 오류:', err);
     alert('Excel 다운로드 중 오류가 발생했습니다.');
@@ -303,31 +287,6 @@ td {
   color: #6b7280;
 }
 
-.delay-reason {
-  max-width: 200px;
-  white-space: normal !important;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.cont-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.cont-badge.uncont {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.cont-badge.cont {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
 .gross-badge {
   display: inline-block;
   padding: 2px 8px;
@@ -368,7 +327,6 @@ td {
 .show-more-btn:hover {
   background: #3b82f6;
   color: white;
-  transform: translateY(-1px);
 }
 
 .excel-download-btn {
@@ -388,14 +346,11 @@ td {
 
 .excel-download-btn:hover:not(:disabled) {
   background: #059669;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .excel-download-btn:disabled {
   background: #9ca3af;
   cursor: not-allowed;
-  transform: none;
 }
 
 .excel-download-btn .icon {

@@ -1,5 +1,5 @@
 <template>
-  <div class="kpi-uploader">
+  <div class="reason-uploader">
     <div
       @drop="handleDrop"
       @dragover.prevent
@@ -10,12 +10,12 @@
     >
       <div v-if="!file" class="upload-prompt">
         <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <p class="upload-text">
-          엑셀 파일을 드래그하거나 클릭하여 업로드
+          사유(키워드) 엑셀 파일을 드래그하거나 클릭하여 업로드
         </p>
-        <p class="upload-hint">{{ mode === 'export' ? 'expo 양식 엑셀 파일을 업로드해주세요' : 'impo 양식 엑셀 파일을 업로드해주세요' }}</p>
+        <p class="upload-hint">F열(BL번호) + K열(특이사항)이 포함된 파일</p>
         <input
           ref="fileInput"
           type="file"
@@ -24,9 +24,9 @@
           class="file-input"
         />
       </div>
-      
+
       <div v-else class="file-info">
-        <div class="file-icon">📊</div>
+        <div class="file-icon">📋</div>
         <div class="file-details">
           <h3>{{ file.name }}</h3>
           <p>{{ formatFileSize(file.size) }}</p>
@@ -38,13 +38,17 @@
         </button>
       </div>
     </div>
-    
-    <div v-if="file" class="action-buttons">
+
+    <div v-if="file && !uploaded" class="action-buttons">
       <button @click="uploadFile" :disabled="uploading" class="upload-btn">
-        {{ uploading ? '업로드 중...' : (mode === 'export' ? '신고번호 추출' : 'BL 번호 추출') }}
+        {{ uploading ? '업로드 중...' : '사유 키워드 추출' }}
       </button>
     </div>
-    
+
+    <div v-if="uploaded" class="success-message">
+      사유 키워드 {{ reasonCount }}건 추출 완료
+    </div>
+
     <div v-if="error" class="error-message">
       {{ error }}
     </div>
@@ -54,32 +58,28 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
-const props = withDefaults(defineProps<{
-  mode?: 'import' | 'export';
-}>(), {
-  mode: 'import',
-});
-
 const emit = defineEmits<{
-  uploaded: [data: { blNumbers: string[], fileName: string, rawData?: any[], declNumbers?: string[], exportCodeMap?: any }]
+  uploaded: [data: { reasonMap: Record<string, string>, fileName: string, rowCount: number }]
 }>();
 
 const fileInput = ref<HTMLInputElement>();
 const file = ref<File | null>(null);
 const isDragging = ref(false);
 const uploading = ref(false);
+const uploaded = ref(false);
+const reasonCount = ref(0);
 const error = ref('');
 
 const handleDrop = (e: DragEvent) => {
   e.preventDefault();
   isDragging.value = false;
-  
+
   const files = e.dataTransfer?.files;
   if (files && files.length > 0) {
-    const droppedFile = files[0];
-    if (validateFile(droppedFile)) {
-      file.value = droppedFile;
+    if (validateFile(files[0])) {
+      file.value = files[0];
       error.value = '';
+      uploaded.value = false;
     }
   }
 };
@@ -91,6 +91,7 @@ const handleFileSelect = (e: Event) => {
     if (validateFile(files[0])) {
       file.value = files[0];
       error.value = '';
+      uploaded.value = false;
     }
   }
 };
@@ -98,23 +99,24 @@ const handleFileSelect = (e: Event) => {
 const validateFile = (f: File): boolean => {
   const validExtensions = ['.xlsx', '.xls'];
   const fileExtension = f.name.toLowerCase().substring(f.name.lastIndexOf('.'));
-  
+
   if (!validExtensions.includes(fileExtension)) {
     error.value = '엑셀 파일(.xlsx, .xls)만 업로드 가능합니다.';
     return false;
   }
-  
+
   if (f.size > 10 * 1024 * 1024) {
     error.value = '파일 크기는 10MB 이하여야 합니다.';
     return false;
   }
-  
+
   return true;
 };
 
 const removeFile = () => {
   file.value = null;
   error.value = '';
+  uploaded.value = false;
   if (fileInput.value) {
     fileInput.value.value = '';
   }
@@ -122,26 +124,26 @@ const removeFile = () => {
 
 const uploadFile = async () => {
   if (!file.value) return;
-  
+
   uploading.value = true;
   error.value = '';
-  
+
   try {
     const formData = new FormData();
     formData.append('file', file.value);
-    
-    const response = await $fetch(`/api/kpi/upload?mode=${props.mode}`, {
+
+    const response = await $fetch('/api/kpi/upload-reasons', {
       method: 'POST',
-      body: formData
+      body: formData,
     });
 
     if (response.success) {
+      uploaded.value = true;
+      reasonCount.value = response.rowCount;
       emit('uploaded', {
-        blNumbers: response.blNumbers,
+        reasonMap: response.reasonMap,
         fileName: response.fileName,
-        rawData: response.rawData,
-        declNumbers: (response as any).declNumbers,
-        exportCodeMap: (response as any).exportCodeMap,
+        rowCount: response.rowCount,
       });
     } else {
       error.value = '업로드 실패';
@@ -162,7 +164,7 @@ const formatFileSize = (bytes: number): string => {
 </script>
 
 <style scoped>
-.kpi-uploader {
+.reason-uploader {
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
@@ -171,21 +173,21 @@ const formatFileSize = (bytes: number): string => {
 .upload-area {
   border: 2px dashed #d1d5db;
   border-radius: 12px;
-  padding: 40px 20px;
-  background: #f9fafb;
+  padding: 30px 20px;
+  background: #fefce8;
   transition: all 0.3s;
   cursor: pointer;
   position: relative;
 }
 
 .upload-area:hover {
-  border-color: #3b82f6;
-  background: #eff6ff;
+  border-color: #f59e0b;
+  background: #fef9c3;
 }
 
 .upload-area.drag-over {
-  border-color: #3b82f6;
-  background: #dbeafe;
+  border-color: #f59e0b;
+  background: #fde68a;
 }
 
 .upload-prompt {
@@ -194,22 +196,22 @@ const formatFileSize = (bytes: number): string => {
 }
 
 .upload-icon {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 20px;
-  color: #9ca3af;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  color: #d97706;
 }
 
 .upload-text {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #374151;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .upload-hint {
-  font-size: 14px;
-  color: #6b7280;
+  font-size: 13px;
+  color: #92400e;
 }
 
 .file-input {
@@ -229,7 +231,7 @@ const formatFileSize = (bytes: number): string => {
 }
 
 .file-icon {
-  font-size: 48px;
+  font-size: 40px;
 }
 
 .file-details {
@@ -237,14 +239,14 @@ const formatFileSize = (bytes: number): string => {
 }
 
 .file-details h3 {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #1f2937;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .file-details p {
-  font-size: 14px;
+  font-size: 13px;
   color: #6b7280;
 }
 
@@ -263,26 +265,25 @@ const formatFileSize = (bytes: number): string => {
 }
 
 .action-buttons {
-  margin-top: 20px;
+  margin-top: 16px;
   display: flex;
   justify-content: center;
 }
 
 .upload-btn {
-  padding: 12px 32px;
-  background: #3b82f6;
+  padding: 10px 28px;
+  background: #f59e0b;
   color: white;
   border: none;
   border-radius: 8px;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .upload-btn:hover:not(:disabled) {
-  background: #2563eb;
-  transform: translateY(-1px);
+  background: #d97706;
 }
 
 .upload-btn:disabled {
@@ -290,9 +291,20 @@ const formatFileSize = (bytes: number): string => {
   cursor: not-allowed;
 }
 
+.success-message {
+  margin-top: 12px;
+  padding: 10px;
+  background: #d1fae5;
+  color: #059669;
+  border-radius: 8px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
 .error-message {
-  margin-top: 16px;
-  padding: 12px;
+  margin-top: 12px;
+  padding: 10px;
   background: #fee2e2;
   color: #dc2626;
   border-radius: 8px;

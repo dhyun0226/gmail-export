@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
     // 파일 응답 설정
     setHeader(event, 'Content-Type', mimeType);
     setHeader(event, 'Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}"`);
-    setHeader(event, 'Content-Length', fileBuffer.length.toString());
+    setHeader(event, 'Content-Length', fileBuffer.length);
     
     return fileBuffer;
     
