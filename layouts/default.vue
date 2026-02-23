@@ -28,8 +28,8 @@
       <aside class="sidebar">
         <div class="sidebar-logo">
           <div class="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Logo" class="h-8 w-8" />
-            <span class="text-[15px] font-bold text-gray-900">관세법인 정상</span>
+            <img src="/logo.png" alt="Logo" class="h-10 w-10" />
+            <span class="text-lg font-bold text-gray-900">관세법인 정상</span>
           </div>
         </div>
 
