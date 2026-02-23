@@ -1,37 +1,36 @@
 <template>
-  <div class="reason-uploader">
+  <div class="w-full max-w-[600px] mx-auto">
     <div
       @drop="handleDrop"
       @dragover.prevent
       @dragenter.prevent
       @dragleave.prevent
-      class="upload-area"
-      :class="{ 'drag-over': isDragging }"
+      :class="['upload-zone relative', isDragging && 'upload-zone-active']"
     >
-      <div v-if="!file" class="upload-prompt">
-        <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <div v-if="!file" class="relative">
+        <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
           <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <p class="upload-text">
+        <p class="text-sm font-semibold text-gray-800 mb-1">
           사유(키워드) 엑셀 파일을 드래그하거나 클릭하여 업로드
         </p>
-        <p class="upload-hint">F열(BL번호) + K열(특이사항)이 포함된 파일</p>
+        <p class="text-xs text-gray-500">F열(BL번호) + K열(특이사항)이 포함된 파일</p>
         <input
           ref="fileInput"
           type="file"
           @change="handleFileSelect"
           accept=".xlsx,.xls"
-          class="file-input"
+          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
       </div>
 
-      <div v-else class="file-info">
-        <div class="file-icon">📋</div>
-        <div class="file-details">
-          <h3>{{ file.name }}</h3>
-          <p>{{ formatFileSize(file.size) }}</p>
+      <div v-else class="flex items-center gap-4">
+        <div class="text-3xl">📋</div>
+        <div class="flex-1 min-w-0">
+          <h3 class="text-sm font-semibold text-gray-800 truncate">{{ file.name }}</h3>
+          <p class="text-xs text-gray-500">{{ formatFileSize(file.size) }}</p>
         </div>
-        <button @click="removeFile" class="remove-btn">
+        <button @click="removeFile" class="btn btn-ghost btn-sm">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
           </svg>
@@ -39,17 +38,21 @@
       </div>
     </div>
 
-    <div v-if="file && !uploaded" class="action-buttons">
-      <button @click="uploadFile" :disabled="uploading" class="upload-btn">
+    <div v-if="file && !uploaded" class="mt-4 flex justify-center">
+      <button
+        @click="uploadFile"
+        :disabled="uploading"
+        class="btn btn-primary btn-md"
+      >
         {{ uploading ? '업로드 중...' : '사유 키워드 추출' }}
       </button>
     </div>
 
-    <div v-if="uploaded" class="success-message">
+    <div v-if="uploaded" class="alert alert-success mt-3 justify-center font-semibold">
       사유 키워드 {{ reasonCount }}건 추출 완료
     </div>
 
-    <div v-if="error" class="error-message">
+    <div v-if="error" class="alert alert-error mt-3 justify-center">
       {{ error }}
     </div>
   </div>
@@ -162,152 +165,3 @@ const formatFileSize = (bytes: number): string => {
   return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
 };
 </script>
-
-<style scoped>
-.reason-uploader {
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.upload-area {
-  border: 2px dashed #d1d5db;
-  border-radius: 12px;
-  padding: 30px 20px;
-  background: #fefce8;
-  transition: all 0.3s;
-  cursor: pointer;
-  position: relative;
-}
-
-.upload-area:hover {
-  border-color: #f59e0b;
-  background: #fef9c3;
-}
-
-.upload-area.drag-over {
-  border-color: #f59e0b;
-  background: #fde68a;
-}
-
-.upload-prompt {
-  text-align: center;
-  position: relative;
-}
-
-.upload-icon {
-  width: 48px;
-  height: 48px;
-  margin: 0 auto 16px;
-  color: #d97706;
-}
-
-.upload-text {
-  font-size: 16px;
-  font-weight: 600;
-  color: #374151;
-  margin-bottom: 6px;
-}
-
-.upload-hint {
-  font-size: 13px;
-  color: #92400e;
-}
-
-.file-input {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.file-info {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.file-icon {
-  font-size: 40px;
-}
-
-.file-details {
-  flex: 1;
-}
-
-.file-details h3 {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 2px;
-}
-
-.file-details p {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.remove-btn {
-  padding: 8px;
-  background: #fee2e2;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  color: #dc2626;
-  transition: background 0.2s;
-}
-
-.remove-btn:hover {
-  background: #fca5a5;
-}
-
-.action-buttons {
-  margin-top: 16px;
-  display: flex;
-  justify-content: center;
-}
-
-.upload-btn {
-  padding: 10px 28px;
-  background: #f59e0b;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.upload-btn:hover:not(:disabled) {
-  background: #d97706;
-}
-
-.upload-btn:disabled {
-  background: #9ca3af;
-  cursor: not-allowed;
-}
-
-.success-message {
-  margin-top: 12px;
-  padding: 10px;
-  background: #d1fae5;
-  color: #059669;
-  border-radius: 8px;
-  text-align: center;
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.error-message {
-  margin-top: 12px;
-  padding: 10px;
-  background: #fee2e2;
-  color: #dc2626;
-  border-radius: 8px;
-  text-align: center;
-}
-</style>

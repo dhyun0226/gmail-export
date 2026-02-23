@@ -1,22 +1,14 @@
 <template>
   <div>
-    <!-- 날짜 선택 -->
+    <!-- Date Selection -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
       <div>
-        <label class="block text-sm font-medium text-text-light mb-2">시작일시</label>
-        <input
-          v-model="startDate"
-          type="datetime-local"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-light transition duration-200 text-text-DEFAULT"
-        />
+        <label class="form-label">시작일시</label>
+        <input v-model="startDate" type="datetime-local" class="form-input" />
       </div>
       <div>
-        <label class="block text-sm font-medium text-text-light mb-2">종료일시</label>
-        <input
-          v-model="endDate"
-          type="datetime-local"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-light transition duration-200 text-text-DEFAULT"
-        />
+        <label class="form-label">종료일시</label>
+        <input v-model="endDate" type="datetime-local" class="form-input" />
       </div>
     </div>
 
@@ -24,22 +16,20 @@
       <button
         @click="startExtraction()"
         :disabled="processing || !startDate || !endDate"
-        class="flex-1 bg-primary-dark text-white font-semibold py-3 px-6 rounded-lg shadow-md"
-        :class="{ '!bg-gray-400': processing }"
+        class="btn btn-primary btn-lg flex-1"
       >
         {{ processing ? '추출 중...' : '추출 시작' }}
       </button>
       <button
         @click="startExtraction(1)"
         :disabled="processing || !startDate || !endDate"
-        class="bg-yellow-500 text-white font-semibold py-3 px-6 rounded-lg shadow-md whitespace-nowrap"
-        :class="{ '!bg-gray-400': processing }"
+        class="btn btn-warning btn-md whitespace-nowrap"
       >
         {{ processing ? '테스트 중...' : '1건 테스트' }}
       </button>
     </div>
 
-    <!-- 진행 상태 -->
+    <!-- Progress -->
     <DocExtractProgress
       :is-processing="processing"
       :completed="completed"
@@ -51,7 +41,7 @@
       :statistics="statistics"
     />
 
-    <!-- 결과 테이블 -->
+    <!-- Result Table -->
     <DocExtractResultTable
       :results="extractionResults"
       :downloading="downloading"
@@ -142,7 +132,6 @@ const driveResult = ref<DriveResult | undefined>(undefined);
 
 let elapsedTimer: NodeJS.Timeout | null = null;
 
-// PDF 참조 정보 (Drive 업로드용)
 const pdfReferences = ref<{ messageId: string; attachmentId: string; filename: string; blNumber: string }[]>([]);
 
 const startExtraction = async (limit?: number) => {
@@ -158,14 +147,12 @@ const startExtraction = async (limit?: number) => {
   currentStep.value = '메일 조회 중...';
   currentFilename.value = '';
 
-  // 타이머 시작
   if (elapsedTimer) clearInterval(elapsedTimer);
   elapsedTimer = setInterval(() => {
     elapsedTime.value++;
   }, 1000);
 
   try {
-    // 1단계: PDF 첨부파일 조회
     const fetchRes = await $fetch<{
       success: boolean;
       emails: EmailWithAttachments[];
@@ -184,7 +171,6 @@ const startExtraction = async (limit?: number) => {
       return;
     }
 
-    // 전체 PDF 목록 평탄화
     let allPdfs: { email: EmailWithAttachments; attachment: AttachmentInfo }[] = [];
     for (const email of fetchRes.emails) {
       for (const att of email.attachments) {
@@ -192,7 +178,6 @@ const startExtraction = async (limit?: number) => {
       }
     }
 
-    // 1건 테스트 모드: 첫 N개만 처리
     if (limit && limit > 0) {
       allPdfs = allPdfs.slice(0, limit);
     }
@@ -202,7 +187,6 @@ const startExtraction = async (limit?: number) => {
       ? `테스트 모드: ${allPdfs.length}개 PDF 추출 시작`
       : `${fetchRes.emails.length}개 메일, ${allPdfs.length}개 PDF 추출 시작`;
 
-    // 2단계: PDF 1건씩 순차 추출
     for (let i = 0; i < allPdfs.length; i++) {
       const item = allPdfs[i]!;
       currentFilename.value = item.attachment.filename;
@@ -223,7 +207,6 @@ const startExtraction = async (limit?: number) => {
 
         extractionResults.value.push(result);
 
-        // Drive 업로드용 참조 저장
         pdfReferences.value.push({
           messageId: item.email.messageId,
           attachmentId: item.attachment.attachmentId,
@@ -245,11 +228,9 @@ const startExtraction = async (limit?: number) => {
       processedCount.value = i + 1;
     }
 
-    // 3단계: 환율 조회 (1회) 후 원화 환산 일괄 적용
     currentStep.value = '환율 조회 중...';
     await applyExchangeRates();
 
-    // 4단계: 통계 계산
     const uniqueBls = new Set(extractionResults.value.map(r => r.blNumber).filter(bl => bl && bl !== 'N/A'));
     statistics.value = {
       totalEmails: fetchRes.emails.length,
@@ -271,7 +252,6 @@ const startExtraction = async (limit?: number) => {
   }
 };
 
-// 엑셀 다운로드
 const downloadExcel = async () => {
   downloading.value = true;
 
@@ -298,7 +278,6 @@ const downloadExcel = async () => {
   }
 };
 
-// Drive 업로드
 const uploadToDrive = async () => {
   if (pdfReferences.value.length === 0) {
     emit('error', '업로드할 파일이 없습니다.');
@@ -332,10 +311,6 @@ const uploadToDrive = async () => {
   }
 };
 
-/**
- * 금액 문자열에서 통화부호와 숫자를 파싱
- * 예: "USD 1,234.56" → { currency: "USD", value: 1234.56 }
- */
 function parseAmount(amount: string): { currency: string; value: number } | null {
   if (!amount) return null;
   const match = amount.match(/([A-Z]{3})\s*([\d,]+\.?\d*)/i)
@@ -356,9 +331,6 @@ function parseAmount(amount: string): { currency: string; value: number } | null
   return { currency, value };
 }
 
-/**
- * 환율 1회 조회 후 전체 결과에 일괄 적용
- */
 const applyExchangeRates = async () => {
   try {
     const today = new Date();
@@ -369,13 +341,11 @@ const applyExchangeRates = async () => {
       params: { date: dateStr, imexTp: '2' }
     });
 
-    // 통화부호 → 환율 맵 생성
     const rateMap = new Map<string, number>();
     for (const r of res.rates) {
       rateMap.set(r.currSgn, r.fxrt);
     }
 
-    // 각 결과에 환율 적용
     for (const result of extractionResults.value) {
       if (!result.amount || result.error) continue;
       const parsed = parseAmount(result.amount);
@@ -396,7 +366,6 @@ const applyExchangeRates = async () => {
   }
 };
 
-// 기본 날짜 설정 (어제 00:00 ~ 23:59)
 const setDefaultDates = () => {
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);

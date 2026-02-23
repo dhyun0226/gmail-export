@@ -4,6 +4,7 @@ import { defineNuxtConfig } from 'nuxt/config'
 export default defineNuxtConfig({
   // --- 기존 설정 보존 --- 
   app: {
+    pageTransition: { name: 'page', mode: 'out-in' },
     head: {
       link: [
         { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css' },
@@ -18,6 +19,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],
+  tailwindcss: {
+    cssPath: '~/assets/css/main.css',
+  },
   pages: true,
 
   // --- [복구] 기존 runtimeConfig 설정 --- 

@@ -1,51 +1,50 @@
 <template>
-  <div v-if="isProcessing || completed" class="bg-white rounded-xl shadow-lg p-6 mb-6">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-bold text-primary-dark">처리 상태</h3>
-      <div v-if="isProcessing" class="w-5 h-5 border-2 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
-      <span v-else class="text-sm font-semibold text-green-600">완료</span>
+  <div v-if="isProcessing || completed" class="card-elevated mb-6">
+    <div class="card-header">
+      <h3 class="section-title">처리 상태</h3>
+      <div v-if="isProcessing" class="spinner-md"></div>
+      <span v-else class="badge badge-green">완료</span>
     </div>
 
-    <!-- 진행 중 -->
-    <div v-if="isProcessing">
-      <div class="flex items-center gap-2 mb-2">
-        <span class="text-sm font-semibold text-text-DEFAULT">{{ currentStep }}</span>
-        <span class="text-sm font-semibold text-blue-500">({{ formatTime(elapsedTime) }})</span>
+    <div class="card-body">
+      <!-- Processing -->
+      <div v-if="isProcessing">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-sm text-gray-600">{{ currentStep }}</span>
+          <span class="text-sm font-semibold text-blue-600">({{ formatTime(elapsedTime) }})</span>
+        </div>
+
+        <div class="flex justify-between text-sm text-gray-500 mb-1.5">
+          <span>{{ processedCount }}/{{ totalCount }} 파일</span>
+          <span>{{ progressPercent }}%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
+        </div>
+
+        <p v-if="currentFilename" class="text-xs text-gray-400 mt-2">
+          {{ currentFilename }}
+        </p>
       </div>
 
-      <div class="flex justify-between text-sm text-text-light mb-1">
-        <span>{{ processedCount }}/{{ totalCount }} 파일</span>
-        <span>{{ progressPercent }}%</span>
-      </div>
-      <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
-        <div
-          class="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-300"
-          :style="{ width: progressPercent + '%' }"
-        ></div>
-      </div>
-
-      <p v-if="currentFilename" class="text-xs text-text-light mt-2">
-        {{ currentFilename }}
-      </p>
-    </div>
-
-    <!-- 완료 통계 -->
-    <div v-if="completed && statistics" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      <div class="bg-gray-50 rounded-lg p-3 text-center border border-gray-200">
-        <div class="text-xs text-text-light font-semibold mb-1">전체 PDF</div>
-        <div class="text-xl font-bold text-text-DEFAULT">{{ statistics.totalPdfs }}</div>
-      </div>
-      <div class="bg-green-50 rounded-lg p-3 text-center border border-green-200">
-        <div class="text-xs text-text-light font-semibold mb-1">추출 성공</div>
-        <div class="text-xl font-bold text-green-600">{{ statistics.successfulExtractions }}</div>
-      </div>
-      <div v-if="statistics.failedExtractions > 0" class="bg-red-50 rounded-lg p-3 text-center border border-red-200">
-        <div class="text-xs text-text-light font-semibold mb-1">추출 실패</div>
-        <div class="text-xl font-bold text-red-600">{{ statistics.failedExtractions }}</div>
-      </div>
-      <div class="bg-blue-50 rounded-lg p-3 text-center border border-blue-200">
-        <div class="text-xs text-text-light font-semibold mb-1">BL 수</div>
-        <div class="text-xl font-bold text-blue-600">{{ statistics.uniqueBlNumbers }}</div>
+      <!-- Completed Statistics -->
+      <div v-if="completed && statistics" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="stat-card border-gray-200 bg-gray-50">
+          <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">전체 PDF</div>
+          <div class="text-xl font-bold text-gray-900">{{ statistics.totalPdfs }}</div>
+        </div>
+        <div class="stat-card border-emerald-200 bg-emerald-50">
+          <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">추출 성공</div>
+          <div class="text-xl font-bold text-emerald-600">{{ statistics.successfulExtractions }}</div>
+        </div>
+        <div v-if="statistics.failedExtractions > 0" class="stat-card border-red-200 bg-red-50">
+          <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">추출 실패</div>
+          <div class="text-xl font-bold text-red-600">{{ statistics.failedExtractions }}</div>
+        </div>
+        <div class="stat-card border-blue-200 bg-blue-50">
+          <div class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-1">BL 수</div>
+          <div class="text-xl font-bold text-blue-600">{{ statistics.uniqueBlNumbers }}</div>
+        </div>
       </div>
     </div>
   </div>
