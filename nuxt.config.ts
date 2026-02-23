@@ -32,6 +32,7 @@ export default defineNuxtConfig({
     aiProvider: process.env.AI_PROVIDER || 'gemini',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
+    unipassApiKey: process.env.UNIPASS_API_KEY || '',
     unipassExchangeRateKey: process.env.UNIPASS_EXCHANGE_RATE_KEY || '',
     public: {
       appUrl: process.env.PUBLIC_APP_URL || 'http://localhost:3000'

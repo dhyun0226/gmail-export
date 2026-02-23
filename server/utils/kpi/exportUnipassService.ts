@@ -15,8 +15,9 @@ export async function fetchExportUnipassTimes(
 
   try {
     const apiUrl = `https://unipass.customs.go.kr:38010/ext/rest/cargCsclPrgsInfoQry/retrieveCargCsclPrgsInfo`;
+    const config = useRuntimeConfig();
     const params = new URLSearchParams({
-      crkyCn: 'u200k223c072x041e040i000b0',
+      crkyCn: config.unipassApiKey,
       blYy: blYear,
       expDclrNo: declNumber
     });
