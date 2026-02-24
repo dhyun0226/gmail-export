@@ -133,10 +133,10 @@ const IconTruck = { render: () => h('svg', { fill: 'none', stroke: 'currentColor
 
 const navItems = [
   { to: '/', label: '마일스톤', icon: IconMail },
-  { to: '/docextract', label: '문서추출', icon: IconDoc },
+  { to: '/cargolist', label: 'Cargo List', icon: IconTruck },
   { to: '/kpi', label: 'KPI', icon: IconChart },
   { to: '/exchange-rate', label: '환율', icon: IconCurrency },
-  { to: '/cargolist', label: 'Cargo List', icon: IconTruck },
+  // { to: '/gongjusaranghae', label: '문서추출', icon: IconDoc },
 ];
 
 onMounted(() => {
