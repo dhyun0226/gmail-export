@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { EXTRACTION_PROMPT, parseAiResponse } from './extractorInterface';
+import { EXTRACTION_PROMPT, parseAiResponseArray } from './extractorInterface';
 import type { ExtractedDocumentData } from './types';
 
 /**
@@ -9,19 +9,19 @@ export async function extractWithGemini(
   pdfBuffer: Buffer,
   filename: string,
   messageId: string
-): Promise<ExtractedDocumentData> {
+): Promise<ExtractedDocumentData[]> {
   const config = useRuntimeConfig();
   const apiKey = config.geminiApiKey;
 
   if (!apiKey) {
-    return {
+    return [{
       messageId,
       sourceFilename: filename,
       documentType: '기타',
       blNumber: '', productName: '', quantity: '', weight: '',
       amount: '', hsCode: '', countryOfOrigin: '', shipper: '',
       error: 'GEMINI_API_KEY가 설정되지 않았습니다'
-    };
+    }];
   }
 
   try {
@@ -46,7 +46,7 @@ export async function extractWithGemini(
     const responseText = result.response.text();
     console.log(`[Gemini] Response for ${filename}:`, responseText.substring(0, 200));
 
-    return parseAiResponse(responseText, messageId, filename);
+    return parseAiResponseArray(responseText, messageId, filename);
 
   } catch (error: any) {
     console.error(`[Gemini] Error extracting ${filename}:`, error);
@@ -58,13 +58,13 @@ export async function extractWithGemini(
       errorMessage = 'PDF 읽기 실패';
     }
 
-    return {
+    return [{
       messageId,
       sourceFilename: filename,
       documentType: '기타',
       blNumber: '', productName: '', quantity: '', weight: '',
       amount: '', hsCode: '', countryOfOrigin: '', shipper: '',
       error: errorMessage
-    };
+    }];
   }
 }

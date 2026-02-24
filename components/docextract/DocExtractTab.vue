@@ -193,7 +193,7 @@ const startExtraction = async (limit?: number) => {
       currentStep.value = `추출 중 (${i + 1}/${allPdfs.length})`;
 
       try {
-        const result = await $fetch<ExtractedResult>('/api/docextract/extract-single', {
+        const results = await $fetch<ExtractedResult[]>('/api/docextract/extract-single', {
           method: 'POST',
           body: {
             messageId: item.email.messageId,
@@ -205,14 +205,16 @@ const startExtraction = async (limit?: number) => {
           }
         });
 
-        extractionResults.value.push(result);
+        extractionResults.value.push(...results);
 
-        pdfReferences.value.push({
-          messageId: item.email.messageId,
-          attachmentId: item.attachment.attachmentId,
-          filename: item.attachment.filename,
-          blNumber: result.blNumber || item.email.blNumber || 'UNKNOWN'
-        });
+        for (const result of results) {
+          pdfReferences.value.push({
+            messageId: item.email.messageId,
+            attachmentId: item.attachment.attachmentId,
+            filename: item.attachment.filename,
+            blNumber: result.blNumber || item.email.blNumber || 'UNKNOWN'
+          });
+        }
       } catch (err: any) {
         extractionResults.value.push({
           messageId: item.email.messageId,

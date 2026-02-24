@@ -1,4 +1,4 @@
-import { EXTRACTION_PROMPT, parseAiResponse } from './extractorInterface';
+import { EXTRACTION_PROMPT, parseAiResponseArray } from './extractorInterface';
 import type { ExtractedDocumentData } from './types';
 
 /**
@@ -9,19 +9,19 @@ export async function extractWithClaude(
   pdfBuffer: Buffer,
   filename: string,
   messageId: string
-): Promise<ExtractedDocumentData> {
+): Promise<ExtractedDocumentData[]> {
   const config = useRuntimeConfig();
   const apiKey = config.anthropicApiKey;
 
   if (!apiKey) {
-    return {
+    return [{
       messageId,
       sourceFilename: filename,
       documentType: '기타',
       blNumber: '', productName: '', quantity: '', weight: '',
       amount: '', hsCode: '', countryOfOrigin: '', shipper: '',
       error: 'ANTHROPIC_API_KEY가 설정되지 않았습니다'
-    };
+    }];
   }
 
   try {
@@ -35,7 +35,7 @@ export async function extractWithClaude(
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
+      max_tokens: 4096,
       messages: [{
         role: 'user',
         content: [
@@ -58,7 +58,7 @@ export async function extractWithClaude(
     const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
     console.log(`[Claude] Response for ${filename}:`, responseText.substring(0, 200));
 
-    return parseAiResponse(responseText, messageId, filename);
+    return parseAiResponseArray(responseText, messageId, filename);
 
   } catch (error: any) {
     console.error(`[Claude] Error extracting ${filename}:`, error);
@@ -70,13 +70,13 @@ export async function extractWithClaude(
       errorMessage = 'PDF 읽기 실패';
     }
 
-    return {
+    return [{
       messageId,
       sourceFilename: filename,
       documentType: '기타',
       blNumber: '', productName: '', quantity: '', weight: '',
       amount: '', hsCode: '', countryOfOrigin: '', shipper: '',
       error: errorMessage
-    };
+    }];
   }
 }
