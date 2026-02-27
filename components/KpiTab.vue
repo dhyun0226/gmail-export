@@ -359,7 +359,7 @@ const downloadKpiReport = async () => {
 
 <style scoped>
 .form-input {
-  @apply px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary-DEFAULT transition-all text-sm;
+  @apply px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary transition-all text-sm;
 }
 .card {
   @apply rounded-xl border border-gray-100;
