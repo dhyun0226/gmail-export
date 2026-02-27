@@ -63,8 +63,15 @@
         </div>
       </div>
 
+      <!-- Cumulative Report Upload (Common) -->
+      <div class="mt-6 pt-6 border-t border-gray-100">
+        <h3 class="form-label text-primary-dark">기존 KPI 누적 리포트 업로드 (선택)</h3>
+        <p class="text-xs text-gray-400 mb-3">업로드 시 기존 리포트 하단에 데이터가 자동으로 추가됩니다.</p>
+        <KpiBaseReportUploader @uploaded="handleBaseReportUploaded" />
+      </div>
+
       <!-- Start Button -->
-      <div v-if="hasUploadedFile">
+      <div v-if="hasUploadedFile" class="mt-8">
         <div class="alert alert-info mb-5">
           <span class="flex-1 font-semibold">{{ uploadedFileName }}</span>
           <span class="badge badge-green">준비 완료</span>
@@ -145,6 +152,7 @@ import { ref, computed } from 'vue';
 import KpiModeSelector from '~/components/kpi/KpiModeSelector.vue';
 import KpiExcelUploader from '~/components/kpi/KpiExcelUploader.vue';
 import KpiReasonUploader from '~/components/kpi/KpiReasonUploader.vue';
+import KpiBaseReportUploader from '~/components/kpi/KpiBaseReportUploader.vue';
 import KpiProcessingStatus from '~/components/kpi/KpiProcessingStatus.vue';
 import KpiResultTable from '~/components/kpi/KpiResultTable.vue';
 import KpiExportResultTable from '~/components/kpi/KpiExportResultTable.vue';
@@ -169,6 +177,12 @@ const declNumbers = ref<string[]>([]);
 const exportCodeMap = ref<Record<string, any>>({});
 const exportUploadedFileName = ref('');
 const exportResults = ref<any[]>([]);
+
+// 기존 누적 리포트 데이터
+const baseReportData = ref<{ importData: any[], exportData: any[] }>({
+  importData: [],
+  exportData: []
+});
 
 const processing = ref(false);
 const processingTime = ref(0);
@@ -208,6 +222,13 @@ const handleFileUploaded = (data: { blNumbers: string[], fileName: string, rawDa
 
 const handleReasonUploaded = (data: { reasonMap: Record<string, string>, fileName: string, rowCount: number }) => {
   reasonMap.value = data.reasonMap;
+};
+
+const handleBaseReportUploaded = (data: { importData: any[], exportData: any[], fileName: string }) => {
+  baseReportData.value = {
+    importData: data.importData,
+    exportData: data.exportData
+  };
 };
 
 const handleExportFileUploaded = (data: { blNumbers: string[], fileName: string, rawData?: any[], declNumbers?: string[], exportCodeMap?: any }) => {
@@ -337,6 +358,7 @@ const downloadKpiReport = async () => {
         exportResults: exportResults.value,
         amatWeek: amatWeek.value,
         amatMonth: amatMonth.value,
+        baseReportData: baseReportData.value,
       }),
     });
 

@@ -46,6 +46,8 @@ export default defineEventHandler(async (event) => {
             customsCode: row['B']?.toString().trim() || '',
             csType: row['L']?.toString().trim() || '',
             tradeType: row['M']?.toString().trim() || '',
+            contractNo2: row['BE']?.toString().trim() || '',
+            acceptTime: row['ED']?.toString().trim() || '',
           }
         }
       }

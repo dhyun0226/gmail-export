@@ -22,13 +22,65 @@ export default defineEventHandler(async (event) => {
     const processed = await processExportDeclNumbers(declNumbers, year, exportCodeMap);
     const { results } = processed;
 
-    const statistics = generateExportStatistics(results);
+    // 추가 계산: 서류수신(G) 대비 수리(H) KPI (1.5시간 기준)
+    const finalResults: ExportKpiProcessResult[] = results.map(result => {
+      const codeEntry = exportCodeMap?.[result.declNumber];
+      if (!codeEntry) return result;
+
+      // G열: All Docs Received (BE열: 계약번호 2)
+      // H열: 수출신고 수리일시 (ED열)
+      const gTimeStr = codeEntry.contractNo2; // "2026-01-28 10:47:18"
+      const hTimeStr = codeEntry.acceptTime;   // "202601281051"
+
+      if (!gTimeStr || !hTimeStr) return result;
+
+      try {
+        // H열 포맷팅 (YYYYMMDDHHmm -> Date)
+        const hYear = hTimeStr.substring(0, 4);
+        const hMonth = hTimeStr.substring(4, 6);
+        const hDay = hTimeStr.substring(6, 8);
+        const hHour = hTimeStr.substring(8, 10);
+        const hMin = hTimeStr.substring(10, 12);
+        const hDate = new Date(`${hYear}-${hMonth}-${hDay}T${hHour}:${hMin}:00`);
+        
+        const gDate = new Date(gTimeStr);
+
+        if (!isNaN(hDate.getTime()) && !isNaN(gDate.getTime())) {
+          // J열: 실제 이행시간 (H - G)
+          const diffInMs = hDate.getTime() - gDate.getTime();
+          const actualClearanceTime = Math.round((diffInMs / (1000 * 60 * 60 * 24)) * 10000) / 10000;
+          
+          // K열: 기준 차이 (J - 0.0625)
+          const diffTime = Math.round((actualClearanceTime - 0.0625) * 10000) / 10000;
+          
+          // N, O열: Gross/Net
+          const gross = diffTime > 0 ? 'N' : 'Y';
+          const net = gross;
+
+          return {
+            ...result,
+            allDocsReceivedTime: gTimeStr,
+            exportDeclAcceptTime: hDate.toISOString().replace('T', ' ').substring(0, 16),
+            actualClearanceTime,
+            diffTime,
+            gross,
+            net
+          };
+        }
+      } catch (e) {
+        console.error(`Calc error for ${result.declNumber}:`, e);
+      }
+      
+      return result;
+    });
+
+    const statistics = generateExportStatistics(finalResults);
 
     console.log('[KPI Export Process] Processing completed:', statistics);
 
     return {
       success: true,
-      results,
+      results: finalResults,
       statistics,
       progress: {
         total: declNumbers.length,

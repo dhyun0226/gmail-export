@@ -68,6 +68,11 @@ export interface ExportKpiProcessResult {
   tradeType?: string;              // 거래구분 매핑
   exportDeclAcceptTime?: string;   // 수출신고수리일시
   loadingCompleteTime?: string;    // 적재완료일시
+  allDocsReceivedTime?: string;    // G열: 서류수신일시
+  actualClearanceTime?: number | null; // J열: 실제 이행시간
+  diffTime?: number | null;        // K열: 기준 차이
+  gross?: string;                  // N열: Gross
+  net?: string;                    // O열: Net
   error?: string;
 }
 
@@ -76,6 +81,8 @@ export interface ExportCodeMapEntry {
   customsCode?: string;   // B열: 세관코드
   csType?: string;         // L열: C/S구분
   tradeType?: string;      // M열: 거래구분
+  contractNo2?: string;    // BE열: 계약번호 2 (서류수신일시)
+  acceptTime?: string;     // ED열: 수리일시
 }
 
 // 수입 KPI 확장 결과 (AMAT, 사유, Gross/Net 포함)

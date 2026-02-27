@@ -82,6 +82,23 @@ export default defineEventHandler(async (event) => {
         net = 'Y';
       }
 
+      // L열: DHL 지연시간 (H - D)
+      let dhlDiffTime: number | null = null;
+      if (result.importAcceptTime && result.mailReceiveTime) {
+        const hTime = new Date(result.importAcceptTime);
+        const dTime = new Date(result.mailReceiveTime);
+        if (!isNaN(hTime.getTime()) && !isNaN(dTime.getTime())) {
+          const diffDays = (hTime.getTime() - dTime.getTime()) / (1000 * 60 * 60 * 24);
+          dhlDiffTime = Math.round(diffDays * 100) / 100;
+        }
+      }
+
+      // M열: DHL 지연시간 차이 (L - 0.2)
+      let dhlKpiDiff: number | null = null;
+      if (dhlDiffTime !== null) {
+        dhlKpiDiff = Math.round((dhlDiffTime - 0.2) * 100) / 100;
+      }
+
       return {
         ...result,
         amatWeek: amatWeek || '',
@@ -90,6 +107,8 @@ export default defineEventHandler(async (event) => {
         controllable: delayMatch?.controllable || '',
         gross,
         net,
+        dhlDiffTime,
+        dhlKpiDiff,
       };
     });
 
