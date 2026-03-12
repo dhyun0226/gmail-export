@@ -340,7 +340,11 @@ const downloadKpiReport = async () => {
       }),
     });
 
-    if (!response.ok) throw new Error('리포트 생성 실패');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Report Download] Error:', response.status, errorText);
+      throw new Error(`리포트 생성 실패 (${response.status})`);
+    }
 
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
@@ -350,7 +354,7 @@ const downloadKpiReport = async () => {
     a.click();
     window.URL.revokeObjectURL(url);
   } catch (err: any) {
-    alert('다운로드 중 오류가 발생했습니다.');
+    alert(`다운로드 중 오류가 발생했습니다: ${err.message}`);
   } finally {
     downloadingReport.value = false;
   }

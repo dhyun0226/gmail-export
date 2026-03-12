@@ -1,5 +1,5 @@
 import moment from 'moment-timezone';
-import { extractBlNumber } from './kpiBlExtractor';
+import { extractBlNumber } from '../blExtractor';
 import type { GmailData } from './types';
 
 /**

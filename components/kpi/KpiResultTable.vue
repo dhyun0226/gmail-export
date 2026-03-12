@@ -37,7 +37,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(result, index) in displayResults" :key="index" :class="{ 'highlight-net-n': result.net === 'N' }">
+          <tr v-for="(result, index) in displayResults" :key="index" :class="{ 'highlight-both-n': result.gross === 'N' && result.net === 'N', 'highlight-net-n': result.net === 'N' && result.gross !== 'N' }">
             <td class="text-center">{{ index + 1 }}</td>
             <td class="font-mono font-semibold text-gray-900">{{ result.blNumber }}</td>
             <td>{{ result.mailReceiveTime || '' }}</td>
@@ -183,5 +183,16 @@ const downloadExcel = async () => {
 }
 .highlight-net-n td:first-child {
   border-left: 3px solid #ef4444 !important;
+}
+.highlight-both-n {
+  background-color: #fee2e2 !important;
+}
+.highlight-both-n td {
+  border-left-color: #fca5a5 !important;
+  border-right-color: #fca5a5 !important;
+  font-weight: 600;
+}
+.highlight-both-n td:first-child {
+  border-left: 4px solid #dc2626 !important;
 }
 </style>

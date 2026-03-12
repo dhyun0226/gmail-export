@@ -146,19 +146,30 @@ export function matchDelayReason(
     };
   }
 
-  // 3단계: #21 조건 - Custom Clearance 날짜 > Submitted to Customs 날짜 (다음날 이상)
-  if (isNextDayOrLater(kpiResult.importAcceptTime, kpiResult.importDeclTime)) {
+  // 3단계: #21 조건 - 창고반입 지연
+  // 조건1: G(Submitted to Customs) < F(Warehouse) — 통관접수가 창고반입보다 빠름
+  // 조건2: F(Warehouse) ≈ H(Custom Clearance) — 2분 이내 차이 (F <= H)
+  const warehouseDate = parseDate(kpiResult.warehouseEntryTime);
+  const submittedDate = parseDate(kpiResult.importDeclTime);
+  const clearanceDate = parseDate(kpiResult.importAcceptTime);
+
+  if (
+    submittedDate && warehouseDate && clearanceDate &&
+    submittedDate.getTime() < warehouseDate.getTime() &&
+    clearanceDate.getTime() >= warehouseDate.getTime() &&
+    (clearanceDate.getTime() - warehouseDate.getTime()) <= 2 * 60 * 1000
+  ) {
     return {
       reason: 'Delay in bringing cargo into bonded warehouse by airlines',
       controllable: 'Uncontrollable',
     };
   }
 
-  // 4단계: #22 조건 - 메일수신시간 09시 이전 또는 18시 이후 (가장 낮은 우선순위)
-  if (kpiResult.mailReceiveTime) {
-    const mailDate = parseDate(kpiResult.mailReceiveTime);
-    if (mailDate) {
-      const hour = mailDate.getHours();
+  // 4단계: #22 조건 - Dest.Arrival(E열)이 업무시간(09~18시) 외인 경우
+  if (kpiResult.lowerDeclAcceptTime) {
+    const destArrival = parseDate(kpiResult.lowerDeclAcceptTime);
+    if (destArrival) {
+      const hour = destArrival.getHours();
       if (hour < 9 || hour >= 18) {
         return {
           reason: "Out of broker's office hours",

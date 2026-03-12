@@ -44,7 +44,11 @@ export default defineNuxtConfig({
     preset: 'vercel',
     externals: {
       inline: ['xlsx']
-    }
+    },
+    routeRules: {
+      '/api/kpi/export-report': { maxBodySize: '10mb' },
+      '/api/kpi/export': { maxBodySize: '10mb' },
+    },
   },
   vite: {
     resolve: {
