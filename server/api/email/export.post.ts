@@ -56,6 +56,9 @@ export default defineEventHandler(async (event) => {
     const destinationCustomClearance = [];
     
     for (const email of emails) {
+      // BL 번호가 N/A인 메일은 제외
+      if (!email.blNumber || email.blNumber === 'N/A') continue;
+
       const emailDateTime = parseEmailDateTime(email.date, email.time);
       const hawbValue = (email.trackingNumber && email.trackingNumber !== 'N/A') 
         ? email.trackingNumber 

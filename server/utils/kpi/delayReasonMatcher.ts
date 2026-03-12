@@ -6,6 +6,13 @@ import type { KpiProcessResult } from './types';
  */
 const KEYWORD_RULES = [
   {
+    priority: 0,
+    code: '#0',
+    keywords: ['검사'],
+    reason: 'Import & Export cargo inspection by KCS',
+    controllable: 'Uncontrollable' as const,
+  },
+  {
     priority: 1,
     code: '#2',
     keywords: ['RWA', 'EASCA', '전파인증'],
