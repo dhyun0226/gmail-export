@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const body = await readBody<any>(event);
-    const { importResults, exportResults, amatWeek, amatMonth } = body;
+    const { importResults, exportResults, amatWeek, amatMonth, baseReportData } = body;
 
     if ((!importResults || importResults.length === 0) && (!exportResults || exportResults.length === 0)) {
       throw createError({
@@ -18,7 +18,8 @@ export default defineEventHandler(async (event) => {
       importResults || [],
       exportResults || [],
       amatWeek || '',
-      amatMonth || ''
+      amatMonth || '',
+      baseReportData
     );
 
     const fileName = `KPI_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
