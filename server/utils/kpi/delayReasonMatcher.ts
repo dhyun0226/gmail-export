@@ -99,6 +99,15 @@ export function matchDelayReason(
   remarkText: string | undefined,
   kpiResult: KpiProcessResult
 ): MatchResult | null {
+  // Diff time 계산 — 0 초과인 경우(딜레이건)에만 사유 적용
+  const diffTime = calcDiffDays(kpiResult.importAcceptTime, kpiResult.lowerDeclAcceptTime);
+  const kpiDiff = diffTime !== null ? Math.round((diffTime - 0.2) * 100) / 100 : null;
+
+  // Diff time이 0 이하이면 딜레이가 아니므로 사유 불필요
+  if (kpiDiff === null || kpiDiff <= 0) {
+    return null;
+  }
+
   // 1단계: 키워드 텍스트 매칭 (우선순위순)
   if (remarkText && remarkText.trim()) {
     const matched: Array<{ priority: number; reason: string; controllable: string }> = [];
@@ -124,14 +133,10 @@ export function matchDelayReason(
   }
 
   // 2단계: #6 조건 - Diff time > 0 + DHL Doc > Dest.Arrival + 다른 키워드 사유 없음
-  const diffTime = calcDiffDays(kpiResult.importAcceptTime, kpiResult.lowerDeclAcceptTime);
-  const kpiDiff = diffTime !== null ? Math.round((diffTime - 0.2) * 100) / 100 : null;
-
   const dhlDocDate = parseDate(kpiResult.mailReceiveTime);
   const destArrivalDate = parseDate(kpiResult.lowerDeclAcceptTime);
 
   if (
-    kpiDiff !== null && kpiDiff > 0 &&
     dhlDocDate !== null && destArrivalDate !== null &&
     dhlDocDate.getTime() > destArrivalDate.getTime()
   ) {
