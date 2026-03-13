@@ -1,8 +1,8 @@
 import moment from 'moment-timezone';
 import { getGmailClient } from '../../utils/google';
 import { extractBody } from '../../utils/emailFilter';
+import { extractBlNumber } from '../../utils/blExtractor';
 import {
-  extractHbFromSubject,
   extractMbFromSubject,
   extractLoadingWeight,
   extractNetWeight,
@@ -120,8 +120,10 @@ export default defineEventHandler(async (event) => {
       }
       if (!source) continue;
 
-      const hbNumber = extractHbFromSubject(source.subject);
-      const mbNumber = extractMbFromSubject(source.subject);
+      // RE: 접두사 제거 후 BL 추출
+      const cleanSubject = source.subject.replace(/^(RE:\s*)+/i, '');
+      const hbNumber = extractBlNumber(cleanSubject);
+      const mbNumber = extractMbFromSubject(cleanSubject);
       const loadingWeight = extractLoadingWeight(source.body);
       const netWeight = extractNetWeight(source.body);
 
