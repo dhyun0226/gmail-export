@@ -53,8 +53,8 @@ function stripHtml(html: string): string {
  */
 export function extractLoadingWeight(body: string): string {
   const text = stripHtml(body);
-  // 적하중량 : 1 KG, 적하중량: 1.5 KG, 적하중량 :1KG 등
-  const match = text.match(/적하중량\s*[:：]\s*([\d.,]+)\s*KG/i);
+  // 적하중량 : 1 KG, 적하 중량: 1.5 KG, 적하- 1 KG, 적하-1KG 등
+  const match = text.match(/적하\s*(?:중량\s*[:：]|-)\s*([\d.,]+)\s*KG/i);
   return match ? `${match[1]} KG` : '';
 }
 
@@ -63,18 +63,21 @@ export function extractLoadingWeight(body: string): string {
  */
 export function extractNetWeight(body: string): string {
   const text = stripHtml(body);
-  // 순중량 : 1.04 KG, 순중량: 2 KG 등
-  const match = text.match(/순중량\s*[:：]\s*([\d.,]+)\s*KG/i);
+  // 순중량, 순 중량 등 띄어쓰기 무관
+  const match = text.match(/순\s*중량\s*[:：]\s*([\d.,]+)\s*KG/i);
   return match ? `${match[1]} KG` : '';
 }
 
 /**
  * RE: 답변 본문에서 "적하중량 진행" 여부 확인
+ * "적하중량" 또는 "적하 중량" 키워드와 "진행" 키워드가 둘 다 존재하면 O
+ * (순서 무관, 각각 독립적으로 체크)
  */
 export function checkLoadingWeightConfirmed(replyBody: string): boolean {
   const text = stripHtml(replyBody);
-  // "적하 중량에 맞추어 진행" 또는 "적하중량에 맞추어 진행" 등
-  return /적하\s*중량.*진행/.test(text);
+  const hasLoadingWeight = /적하\s*중량/.test(text);
+  const hasProgress = /진행/.test(text);
+  return hasLoadingWeight && hasProgress;
 }
 
 /**
