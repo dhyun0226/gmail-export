@@ -21,10 +21,14 @@ export default defineEventHandler(async (event) => {
   try {
     const gmail = await getGmailClient(accessToken);
 
-    // 6개월 전부터 현재까지
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - 6);
+    // 쿼리 파라미터에서 날짜 범위 받기 (기본값: 6개월)
+    const query_ = getQuery(event);
+    const startDate = query_.startDate
+      ? new Date(query_.startDate as string)
+      : (() => { const d = new Date(); d.setMonth(d.getMonth() - 6); return d; })();
+    const endDate = query_.endDate
+      ? new Date(new Date(query_.endDate as string).getTime() + 86400000) // 종료일 포함
+      : new Date();
 
     const startTimestamp = Math.floor(startDate.getTime() / 1000);
     const endTimestamp = Math.floor(endDate.getTime() / 1000);

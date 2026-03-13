@@ -2,11 +2,29 @@
   <div>
     <div class="page-header mb-8">
       <h1 class="page-title">중량문의 조회</h1>
-      <p class="page-subtitle">중량문의 메일에서 적하중량/순중량 데이터를 자동 추출합니다. (최근 6개월)</p>
+      <p class="page-subtitle">중량문의 메일에서 적하중량/순중량 데이터를 자동 추출합니다.</p>
     </div>
 
-    <!-- 조회 버튼 -->
-    <div class="mb-6">
+    <!-- 조회 조건 -->
+    <div class="mb-6 flex items-end gap-4 flex-wrap">
+      <div>
+        <label class="block text-sm font-bold text-gray-600 mb-1">조회 시작일</label>
+        <input
+          v-model="startDateStr"
+          type="date"
+          class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          :disabled="searching"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-bold text-gray-600 mb-1">조회 종료일</label>
+        <input
+          v-model="endDateStr"
+          type="date"
+          class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          :disabled="searching"
+        />
+      </div>
       <button
         @click="search"
         :disabled="searching"
@@ -118,6 +136,15 @@ interface WeightInquiryItem {
   threadId: string;
 }
 
+// 기본값: 6개월 전 ~ 오늘
+const today = new Date();
+const sixMonthsAgo = new Date();
+sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+const toDateStr = (d: Date) => d.toISOString().split('T')[0];
+
+const startDateStr = ref(toDateStr(sixMonthsAgo));
+const endDateStr = ref(toDateStr(today));
+
 const results = ref<WeightInquiryItem[]>([]);
 const searching = ref(false);
 const searched = ref(false);
@@ -150,7 +177,7 @@ const search = async () => {
   searchTimer = setInterval(() => { searchTime.value++; }, 1000);
 
   try {
-    const data = await $fetch('/api/weight-inquiry/search');
+    const data = await $fetch(`/api/weight-inquiry/search?startDate=${startDateStr.value}&endDate=${endDateStr.value}`);
     if (data.success) {
       results.value = data.results;
     }
