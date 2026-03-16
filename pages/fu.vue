@@ -63,6 +63,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import * as XLSX from 'xlsx';
 
 const originalFile = ref<File | null>(null);
 const filterFile = ref<File | null>(null);
@@ -71,6 +72,15 @@ const filterFileName = ref('');
 const processing = ref(false);
 const error = ref('');
 const successMsg = ref('');
+
+const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = () => reject(new Error('파일 읽기 실패'));
+    reader.readAsArrayBuffer(file);
+  });
+};
 
 const onOriginalFile = (e: Event) => {
   const target = e.target as HTMLInputElement;
@@ -100,26 +110,66 @@ const processFilter = async () => {
   successMsg.value = '';
 
   try {
-    const formData = new FormData();
-    formData.append('original', originalFile.value);
-    formData.append('filter', filterFile.value);
+    // 두 파일 동시 읽기
+    const [originalBuf, filterBuf] = await Promise.all([
+      readFileAsArrayBuffer(originalFile.value),
+      readFileAsArrayBuffer(filterFile.value),
+    ]);
 
-    const response = await fetch('/api/fu/filter', {
-      method: 'POST',
-      body: formData,
-    });
+    // 필터링 엑셀: A열 코드 목록 (헤더 없음)
+    const filterWorkbook = XLSX.read(filterBuf, { type: 'array' });
+    const filterSheet = filterWorkbook.Sheets[filterWorkbook.SheetNames[0]];
+    const filterRows: any[][] = XLSX.utils.sheet_to_json(filterSheet, { header: 1 });
+    const filterCodes = new Set(
+      filterRows.map((row) => String(row[0] ?? '').trim()).filter((v) => v !== '')
+    );
 
-    if (!response.ok) {
-      const errText = await response.text();
-      let errMsg = '필터링 처리 중 오류가 발생했습니다.';
-      try {
-        const errData = JSON.parse(errText);
-        errMsg = errData.statusMessage || errData.message || errMsg;
-      } catch {}
-      throw new Error(errMsg);
+    if (filterCodes.size === 0) {
+      throw new Error('필터링 엑셀에 코드가 없습니다.');
     }
 
-    const blob = await response.blob();
+    // 원본 엑셀 읽기
+    const originalWorkbook = XLSX.read(originalBuf, { type: 'array' });
+    const originalSheet = originalWorkbook.Sheets[originalWorkbook.SheetNames[0]];
+    const originalRows: any[][] = XLSX.utils.sheet_to_json(originalSheet, { header: 1 });
+
+    if (originalRows.length === 0) {
+      throw new Error('원본 엑셀이 비어있습니다.');
+    }
+
+    // 헤더에서 FU 열 찾기
+    const headerRow = originalRows[0];
+    const fuColIndex = headerRow.findIndex(
+      (cell: any) => String(cell ?? '').trim().toUpperCase() === 'FU'
+    );
+
+    if (fuColIndex === -1) {
+      throw new Error('원본 엑셀에서 FU 열을 찾을 수 없습니다.');
+    }
+
+    // 필터링: 헤더 + FU 열 값이 필터 코드에 있는 행
+    const filteredRows: any[][] = [headerRow];
+    for (let i = 1; i < originalRows.length; i++) {
+      const row = originalRows[i];
+      const fuValue = String(row[fuColIndex] ?? '').trim();
+      if (filterCodes.has(fuValue)) {
+        filteredRows.push(row);
+      }
+    }
+
+    // 결과 엑셀 생성
+    const resultWorkbook = XLSX.utils.book_new();
+    const resultSheet = XLSX.utils.aoa_to_sheet(filteredRows);
+
+    if (originalSheet['!cols']) {
+      resultSheet['!cols'] = originalSheet['!cols'];
+    }
+
+    XLSX.utils.book_append_sheet(resultWorkbook, resultSheet, 'FU 필터링');
+
+    // 다운로드
+    const wbout = XLSX.write(resultWorkbook, { type: 'array', bookType: 'xlsx' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -127,7 +177,7 @@ const processFilter = async () => {
     a.click();
     window.URL.revokeObjectURL(url);
 
-    successMsg.value = '필터링 완료! 파일이 다운로드됩니다.';
+    successMsg.value = `필터링 완료! ${filteredRows.length - 1}건 추출되었습니다.`;
   } catch (err: any) {
     error.value = err.message || '필터링 처리 중 오류가 발생했습니다.';
   } finally {
