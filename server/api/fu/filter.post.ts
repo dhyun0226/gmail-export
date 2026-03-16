@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx';
 import { readMultipartFormData } from 'h3';
 
 export default defineEventHandler(async (event) => {
+  try {
   const formData = await readMultipartFormData(event);
   if (!formData || formData.length < 2) {
     throw createError({ statusCode: 400, statusMessage: '원본 엑셀과 필터링 엑셀 두 파일이 필요합니다.' });
@@ -74,4 +75,12 @@ export default defineEventHandler(async (event) => {
   setHeader(event, 'Content-Length', fileBuffer.length);
 
   return fileBuffer;
+  } catch (error: any) {
+    console.error('[FU Filter] Error:', error);
+    if (error.statusCode) throw error;
+    throw createError({
+      statusCode: 500,
+      statusMessage: error.message || '필터링 처리 중 오류가 발생했습니다.',
+    });
+  }
 });

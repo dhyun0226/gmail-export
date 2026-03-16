@@ -48,6 +48,7 @@ export default defineNuxtConfig({
     routeRules: {
       '/api/kpi/export-report': { maxBodySize: '10mb' },
       '/api/kpi/export': { maxBodySize: '10mb' },
+      '/api/fu/filter': { maxBodySize: '50mb' },
     },
   },
   vite: {

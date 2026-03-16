@@ -110,8 +110,13 @@ const processFilter = async () => {
     });
 
     if (!response.ok) {
-      const errData = await response.json().catch(() => null);
-      throw new Error(errData?.statusMessage || '필터링 처리 중 오류가 발생했습니다.');
+      const errText = await response.text();
+      let errMsg = '필터링 처리 중 오류가 발생했습니다.';
+      try {
+        const errData = JSON.parse(errText);
+        errMsg = errData.statusMessage || errData.message || errMsg;
+      } catch {}
+      throw new Error(errMsg);
     }
 
     const blob = await response.blob();
