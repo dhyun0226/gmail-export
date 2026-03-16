@@ -63,7 +63,6 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import * as XLSX from 'xlsx';
 
 const originalFile = ref<File | null>(null);
 const filterFile = ref<File | null>(null);
@@ -110,6 +109,9 @@ const processFilter = async () => {
   successMsg.value = '';
 
   try {
+    // XLSX 동적 import (브라우저에서만)
+    const XLSX = await import('xlsx');
+
     // 두 파일 동시 읽기
     const [originalBuf, filterBuf] = await Promise.all([
       readFileAsArrayBuffer(originalFile.value),
