@@ -2,7 +2,7 @@
   <div>
     <div class="page-header mb-8">
       <h1 class="page-title">엑셀 필터링</h1>
-      <p class="page-subtitle">대용량 엑셀 파일에서 특정 열 기준으로 원하는 행만 추출하는 프로그램입니다.</p>
+      <p class="page-subtitle">대용량 엑셀 파일에서 원하는 열 기준으로 행을 추출하는 프로그램입니다.</p>
     </div>
 
     <!-- 프로그램 다운로드 -->
@@ -10,7 +10,7 @@
       <div class="flex items-center justify-between mb-4">
         <p class="text-lg font-bold text-blue-800">프로그램 다운로드</p>
         <a
-          href="/FU필터링.zip"
+          href="/엑셀필터링.zip"
           download
           class="btn btn-primary btn-lg gap-2 shrink-0"
         >
@@ -33,9 +33,9 @@
         <div>
           <h4 class="font-bold text-gray-900 mb-2">준비물</h4>
           <ul class="list-disc pl-5 space-y-1">
-            <li><strong>FU필터링.exe</strong> — 위에서 다운로드한 프로그램 (ZIP 압축 해제)</li>
-            <li><strong>원본.xlsx</strong> — 필터링할 대용량 엑셀 (파일명을 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">원본.xlsx</code>로 변경)</li>
-            <li><strong>필터.xlsx</strong> — A열에 필터링 코드 목록 (파일명을 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">필터.xlsx</code>로 변경, 헤더 없이)</li>
+            <li><strong>엑셀필터링.exe</strong> — 위에서 다운로드한 ZIP을 압축 해제하면 들어있습니다</li>
+            <li><strong>원본.xlsx</strong> — 필터링할 엑셀 파일 (파일명을 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">원본.xlsx</code>로 변경)</li>
+            <li><strong>필터.xlsx</strong> — A열에 추출할 코드 목록이 적힌 엑셀 (파일명을 <code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">필터.xlsx</code>로 변경, 헤더 없이 1행부터 코드)</li>
           </ul>
         </div>
 
@@ -54,10 +54,10 @@
               <span class="flex-shrink-0 w-7 h-7 bg-primary/10 text-primary rounded-full flex items-center justify-center text-xs font-bold">2</span>
               <div>
                 <p class="font-semibold">파일 3개 넣기</p>
-                <p class="text-gray-500">FU필터링.exe, 원본.xlsx, 필터.xlsx를 같은 폴더에 넣습니다.</p>
+                <p class="text-gray-500">엑셀필터링.exe, 원본.xlsx, 필터.xlsx를 같은 폴더에 넣습니다.</p>
                 <div class="mt-2 bg-gray-50 rounded-lg p-3 font-mono text-xs text-gray-600">
                   📁 폴더<br>
-                  &nbsp;&nbsp;├── FU필터링.exe<br>
+                  &nbsp;&nbsp;├── 엑셀필터링.exe<br>
                   &nbsp;&nbsp;├── 원본.xlsx<br>
                   &nbsp;&nbsp;└── 필터.xlsx
                 </div>
@@ -66,16 +66,20 @@
             <div class="flex gap-3">
               <span class="flex-shrink-0 w-7 h-7 bg-primary/10 text-primary rounded-full flex items-center justify-center text-xs font-bold">3</span>
               <div>
-                <p class="font-semibold">FU필터링.exe 더블클릭</p>
+                <p class="font-semibold">엑셀필터링.exe 더블클릭</p>
                 <p class="text-gray-500">검은 창이 열립니다. (Windows 보안 경고가 뜨면 "추가 정보" → "실행" 클릭)</p>
               </div>
             </div>
             <div class="flex gap-3">
               <span class="flex-shrink-0 w-7 h-7 bg-primary/10 text-primary rounded-full flex items-center justify-center text-xs font-bold">4</span>
               <div>
-                <p class="font-semibold">열 이름 입력</p>
-                <p class="text-gray-500">"필터링 기준 열 이름을 입력하세요" 라고 나오면 열 이름을 입력하고 Enter를 누르세요. (예: FU)</p>
-                <p class="text-gray-400 text-xs mt-1">그냥 Enter만 누르면 기본값 "FU"로 진행됩니다.</p>
+                <p class="font-semibold">필터링할 열 이름 입력</p>
+                <p class="text-gray-500">아래처럼 질문이 나옵니다:</p>
+                <div class="mt-2 bg-gray-800 text-green-400 rounded-lg p-3 font-mono text-xs">
+                  필터링 기준 열 이름을 입력하세요 (기본값: FU): <span class="text-white">_</span>
+                </div>
+                <p class="text-gray-500 mt-2">원본 엑셀 헤더에 있는 열 이름을 입력하고 Enter를 누르세요.</p>
+                <p class="text-gray-400 text-xs mt-1">예시: FU, BL, CODE, 품목코드 등 어떤 열이든 가능합니다. 그냥 Enter만 누르면 "FU"로 진행됩니다.</p>
               </div>
             </div>
             <div class="flex gap-3">
@@ -83,6 +87,9 @@
               <div>
                 <p class="font-semibold">처리 완료 대기</p>
                 <p class="text-gray-500">진행률이 표시됩니다. 파일이 크면 몇 분 걸릴 수 있으니 <strong>검은 창을 닫지 말고</strong> 기다려주세요.</p>
+                <div class="mt-2 bg-gray-800 text-green-400 rounded-lg p-3 font-mono text-xs">
+                  [██████████░░░░░░░░░░] 50% (400,000/800,000행) 매칭 3,456건
+                </div>
               </div>
             </div>
             <div class="flex gap-3">
@@ -109,11 +116,12 @@
 
         <!-- 필터링 기준 -->
         <div>
-          <h4 class="font-bold text-gray-900 mb-2">필터링 기준</h4>
+          <h4 class="font-bold text-gray-900 mb-2">어떻게 필터링 되나요?</h4>
           <ul class="list-disc pl-5 space-y-1">
-            <li>원본 엑셀의 <strong>헤더(1행)</strong>에서 "FU" 열을 자동으로 찾습니다</li>
-            <li>필터 엑셀의 <strong>A열</strong>에 있는 코드와 일치하는 행만 추출합니다</li>
-            <li>중복 행도 모두 포함됩니다</li>
+            <li>원본 엑셀의 <strong>1행(헤더)</strong>에서 입력한 열 이름을 찾습니다</li>
+            <li>그 열의 값이 필터 엑셀 <strong>A열</strong>에 있는 코드와 일치하는 행만 추출합니다</li>
+            <li>같은 코드가 여러 행에 있으면 <strong>전부 다</strong> 가져옵니다</li>
+            <li>헤더는 결과 파일에도 그대로 포함됩니다</li>
           </ul>
         </div>
       </div>
