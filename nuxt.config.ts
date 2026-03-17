@@ -41,7 +41,7 @@ export default defineNuxtConfig({
 
   // --- [적용] 새로운 빌드 최적화 설정 ---
   nitro: {
-    preset: 'vercel',
+    preset: 'node-server',
     externals: {
       inline: ['xlsx']
     },
