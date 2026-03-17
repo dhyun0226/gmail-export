@@ -5,6 +5,26 @@
       <p class="page-subtitle">원본 엑셀의 FU 열을 기준으로 필터링 코드에 해당하는 행만 추출합니다.</p>
     </div>
 
+    <!-- 프로그램 다운로드 -->
+    <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-5">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-bold text-blue-800">대용량 파일 (80만행 이상) 처리가 필요하신가요?</p>
+          <p class="text-xs text-blue-600 mt-1">PC에서 직접 실행하는 프로그램을 다운로드하세요. 파일 크기 제한 없이 처리 가능합니다.</p>
+        </div>
+        <a
+          href="/FU필터링.zip"
+          download
+          class="btn btn-primary btn-md gap-2 shrink-0"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          프로그램 다운로드
+        </a>
+      </div>
+    </div>
+
     <!-- 파일 업로드 -->
     <div class="mb-6 flex flex-col gap-5">
       <!-- 원본 엑셀 -->
