@@ -139,7 +139,7 @@ const navItems = [
   { to: '/kpi', label: 'KPI', icon: IconChart },
   { to: '/weight-inquiry', label: '중량문의', icon: IconScale },
   { to: '/exchange-rate', label: '환율', icon: IconCurrency },
-  { to: '/fu', label: 'FU', icon: IconFilter },
+  { to: '/fu', label: '엑셀 필터링', icon: IconFilter },
   // { to: '/gongjusaranghae', label: '문서추출', icon: IconDoc },
 ];
 
