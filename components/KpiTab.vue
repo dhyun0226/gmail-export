@@ -325,28 +325,125 @@ const startFullProcessing = async () => {
   }
 };
 
+const calculateTimeDifferenceInDays = (endTime: string | undefined, startTime: string | undefined): number | string => {
+  if (!endTime || !startTime || endTime === '-' || startTime === '-') return '';
+  try {
+    const end = new Date(endTime);
+    const start = new Date(startTime);
+    if (isNaN(end.getTime()) || isNaN(start.getTime())) return '';
+    const diffInMs = end.getTime() - start.getTime();
+    const diffInDays = diffInMs / (1000 * 60 * 60 * 24);
+    return Math.round(diffInDays * 10000) / 10000;
+  } catch {
+    return '';
+  }
+};
+
 const downloadKpiReport = async () => {
   downloadingReport.value = true;
   try {
-    const response = await fetch('/api/kpi/export-report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        importResults: importResults.value,
-        exportResults: exportResults.value,
-        amatWeek: amatWeek.value,
-        amatMonth: amatMonth.value,
-        baseReportData: baseReportData.value,
-      }),
-    });
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.utils.book_new();
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Report Download] Error:', response.status, errorText);
-      throw new Error(`리포트 생성 실패 (${response.status})`);
+    // Import 시트 데이터
+    let importData: any[][] = [];
+    if (baseReportData.value?.importData?.length > 0) {
+      importData = JSON.parse(JSON.stringify(baseReportData.value.importData));
+    } else {
+      importData.push([
+        'AMAT WK', 'AMAT MONTH', 'HAWB', 'DHL Doc', 'Dest.Arrival',
+        'Warehouse', 'Submitted to Customs', 'Custom Clearance',
+        'KPI(Hour)', 'Actual', 'Diff time', 'Actual(DHL)', 'Diff time(DHL)',
+        'Delay Reason Details', 'Controll/Uncontroll', 'Gross', 'Net'
+      ]);
     }
+    for (const r of importResults.value) {
+      const jValue = calculateTimeDifferenceInDays(r.importAcceptTime, r.lowerDeclAcceptTime);
+      const kValue = typeof jValue === 'number' ? Math.round((jValue - 0.2) * 100) / 100 : '';
+      importData.push([
+        r.amatWeek || amatWeek.value, r.amatMonth || amatMonth.value,
+        r.blNumber, r.mailReceiveTime || '', r.lowerDeclAcceptTime || '',
+        r.warehouseEntryTime || '', r.importDeclTime || '', r.importAcceptTime || '',
+        0.2, jValue, kValue, r.dhlDiffTime ?? '', r.dhlKpiDiff ?? '',
+        r.delayReason || '', r.controllable || '', r.gross || '', r.net || '',
+      ]);
+    }
+    const importSheet = XLSX.utils.aoa_to_sheet(importData);
+    importSheet['!cols'] = [
+      { wch: 12 }, { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 18 },
+      { wch: 18 }, { wch: 22 }, { wch: 18 },
+      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 14 },
+      { wch: 50 }, { wch: 22 }, { wch: 8 }, { wch: 8 },
+    ];
+    XLSX.utils.book_append_sheet(workbook, importSheet, 'Import KPI');
 
-    const blob = await response.blob();
+    // Export 시트 데이터
+    let exportData: any[][] = [];
+    if (baseReportData.value?.exportData?.length > 0) {
+      exportData = JSON.parse(JSON.stringify(baseReportData.value.exportData));
+    } else {
+      exportData.push([
+        'AMAT WK', 'AMAT MONTH', 'Export Declaration Number',
+        'Customs(Export)', 'Customs Inspection or document Received',
+        'Normal Export / Re-Export',
+        'All Docs Received', 'Destination Custom Clearance',
+        'Required Clearance Time', 'Actual Clearance Time', 'Diff time',
+        'Delay Reason Details', 'Controllable or Uncontrollable',
+        'Gross', 'Net'
+      ]);
+    }
+    for (const r of exportResults.value) {
+      exportData.push([
+        amatWeek.value, amatMonth.value,
+        r.declNumber, r.customsName || '', r.inspectionType || '',
+        r.tradeType || '', r.allDocsReceivedTime || '', r.exportDeclAcceptTime || '',
+        0.0625, r.actualClearanceTime ?? '', r.diffTime ?? '',
+        '', '', r.gross || '', r.net || '',
+      ]);
+    }
+    const exportSheet = XLSX.utils.aoa_to_sheet(exportData);
+    exportSheet['!cols'] = [
+      { wch: 12 }, { wch: 15 }, { wch: 25 },
+      { wch: 16 }, { wch: 40 }, { wch: 22 },
+      { wch: 20 }, { wch: 28 },
+      { wch: 22 }, { wch: 22 }, { wch: 12 },
+      { wch: 30 }, { wch: 28 }, { wch: 8 }, { wch: 8 },
+    ];
+    XLSX.utils.book_append_sheet(workbook, exportSheet, 'Export KPI');
+
+    // Summary 시트
+    const importRows = importData.slice(1).filter(row => row[2]);
+    const exportRows = exportData.slice(1).filter(row => row[2]);
+    const importTotal = importRows.length;
+    const importGrossY = importRows.filter(row => row[15] === 'Y').length;
+    const importNetY = importRows.filter(row => row[16] === 'Y').length;
+    const importGrossRate = importTotal > 0 ? Math.round((importGrossY / importTotal) * 10000) / 100 : 0;
+    const importNetRate = importTotal > 0 ? Math.round((importNetY / importTotal) * 10000) / 100 : 0;
+    const exportTotal = exportRows.length;
+    const exportGrossY = exportRows.filter(row => row[13] === 'Y').length;
+    const exportNetY = exportRows.filter(row => row[14] === 'Y').length;
+    const exportGrossRate = exportTotal > 0 ? Math.round((exportGrossY / exportTotal) * 10000) / 100 : 0;
+    const exportNetRate = exportTotal > 0 ? Math.round((exportNetY / exportTotal) * 10000) / 100 : 0;
+
+    const summaryData = [
+      ['KPI Summary Report'],
+      ['AMAT WK', amatWeek.value],
+      ['AMAT MONTH', amatMonth.value],
+      [],
+      ['', 'Import', 'Export'],
+      ['Total', importTotal, exportTotal],
+      ['Gross Y', importGrossY, exportGrossY],
+      ['Net Y', importNetY, exportNetY],
+      ['Gross Rate (%)', importGrossRate, exportGrossRate],
+      ['Net Rate (%)', importNetRate, exportNetRate],
+    ];
+    const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+    summarySheet['!cols'] = [{ wch: 18 }, { wch: 15 }, { wch: 15 }];
+    XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
+
+    // 다운로드
+    const wbout = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
