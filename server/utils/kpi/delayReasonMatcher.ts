@@ -15,8 +15,8 @@ const KEYWORD_RULES = [
   {
     priority: 1,
     code: '#2',
-    keywords: ['RWA', 'EASCA', '전파인증'],
-    reason: 'Exemption/Approval for Import&Export requirements; RWA, EASCA...',
+    keywords: ['RWA', 'EASCA', '전파인증', 'E', 'R'],
+    reason: 'Exemption/Approval for Import&Export requirements; RWA, EASCA, Chemical substance verification certificate, Export self-classification form, etc.',
     controllable: 'Uncontrollable' as const,
   },
   {
@@ -110,11 +110,13 @@ export function matchDelayReason(
 
   // 1단계: 키워드 텍스트 매칭 (우선순위순)
   if (remarkText && remarkText.trim()) {
+    // 구분자(콤마/공백/슬래시/세미콜론/파이프)로 토큰 분리 후 equal 매칭
+    const tokens = remarkText.split(/[,\s/;|]+/).filter(t => t.length > 0);
     const matched: Array<{ priority: number; reason: string; controllable: string }> = [];
 
     for (const rule of KEYWORD_RULES) {
       for (const keyword of rule.keywords) {
-        if (remarkText.includes(keyword)) {
+        if (tokens.includes(keyword)) {
           matched.push({
             priority: rule.priority,
             reason: rule.reason,
