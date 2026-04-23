@@ -37,16 +37,22 @@ export default defineEventHandler(async (event) => {
   const ctRows: any[] = [];
 
   for (const result of data) {
-    const trackingNumber = result.loadId || '';
+    // 규칙:
+    //  - Load ID가 있는 경우 → SystemLoadID=loadId, TrackingNumber=공란
+    //  - Load ID가 없는 경우 → SystemLoadID=공란, TrackingNumber=메일에서 추출한 UPS tracking
+    const hasLoadId = !!(result.loadId && String(result.loadId).trim());
+    const systemLoadId = hasLoadId ? String(result.loadId).trim() : '';
+    const trackingNumber = hasLoadId ? '' : (result.trackingNumber || '');
+
     const common = {
       brokerName: 'TOPCUSTOM',
       carrierCode: result.carrierCode || '',
-      systemLoadId: result.loadId || '',
+      systemLoadId,
       trackingNumber,
       city: 'Incheon',
       state: '',
       country: 'KR',
-      sortKey: result.loadId || result.blNumber || ''
+      sortKey: systemLoadId || result.blNumber || ''
     };
 
     // DR - Gmail 메일 수신시간

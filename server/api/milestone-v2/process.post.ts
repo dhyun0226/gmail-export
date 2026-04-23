@@ -4,6 +4,39 @@ import moment from 'moment-timezone';
 import https from 'https';
 import { XMLParser } from 'fast-xml-parser';
 import { getGmailClient } from '../../utils/google';
+import { extractUpsShipmentInfo } from '../../utils/blExtractor';
+
+// Gmail 멀티파트 본문 디코드 (중첩 구조 재귀 탐색)
+function extractBody(messagePart: any, depth: number = 0): string {
+  if (depth > 10) return '';
+
+  if (messagePart?.body?.data) {
+    return Buffer.from(messagePart.body.data, 'base64url').toString('utf8');
+  }
+
+  if (messagePart?.parts && messagePart.parts.length > 0) {
+    for (const part of messagePart.parts) {
+      if (part.mimeType === 'text/html') {
+        const b = extractBody(part, depth + 1);
+        if (b) return b;
+      }
+    }
+    for (const part of messagePart.parts) {
+      if (part.mimeType === 'text/plain') {
+        const b = extractBody(part, depth + 1);
+        if (b) return b;
+      }
+    }
+    for (const part of messagePart.parts) {
+      if (part.mimeType?.startsWith('multipart/')) {
+        const b = extractBody(part, depth + 1);
+        if (b) return b;
+      }
+    }
+  }
+
+  return '';
+}
 
 // HTTPS 요청 함수
 function httpsRequest(url: string): Promise<string> {
@@ -89,8 +122,12 @@ async function fetchUnipassData(blNumber: string, blYear: string) {
   }
 }
 
-// Gmail에서 BL번호로 메일 수신시간 조회
-async function fetchEmailTime(gmail: any, blNumber: string): Promise<{ emailDate: string; emailTime: string }> {
+// Gmail에서 BL번호로 메일 수신시간 + (UPS Pre-Alert일 경우) Tracking 번호 조회
+async function fetchEmailInfo(
+  gmail: any,
+  blNumber: string
+): Promise<{ emailDate: string; emailTime: string; trackingNumber: string }> {
+  const empty = { emailDate: '', emailTime: '', trackingNumber: '' };
   try {
     // BL번호로 Gmail 검색
     const response = await gmail.users.messages.list({
@@ -101,30 +138,48 @@ async function fetchEmailTime(gmail: any, blNumber: string): Promise<{ emailDate
 
     const messages = response.data.messages || [];
     if (messages.length === 0) {
-      return { emailDate: '', emailTime: '' };
+      return empty;
     }
 
-    // 첫 번째 매칭 메일의 상세 정보
+    // 첫 번째 매칭 메일의 상세 정보 (본문 포함)
     const detail = await gmail.users.messages.get({
       userId: 'me',
       id: messages[0].id!,
-      format: 'metadata',
-      metadataHeaders: ['Date']
+      format: 'full'
     });
 
-    const headers = detail.data.payload?.headers || [];
+    const payload = detail.data.payload;
+    const headers = payload?.headers || [];
     const dateHeader = headers.find((h: any) => h.name === 'Date')?.value || '';
+    const subject = headers.find((h: any) => h.name === 'Subject')?.value || '';
+    const sender = headers.find((h: any) => h.name === 'From')?.value || '';
 
-    if (!dateHeader) return { emailDate: '', emailTime: '' };
+    if (!dateHeader) return empty;
 
     const date = moment(dateHeader).tz('Asia/Seoul');
-    return {
-      emailDate: date.format('YYYYMMDD'),
-      emailTime: date.format('H:mm')
-    };
+    const emailDate = date.format('YYYYMMDD');
+    const emailTime = date.format('H:mm');
+
+    // UPS Pre-Alert 메일인 경우 본문에서 Tracking 번호 추출
+    let trackingNumber = '';
+    if (sender.toLowerCase().includes('ups') && subject.includes('[Pre-Alert]')) {
+      try {
+        const body = extractBody(payload);
+        if (body) {
+          const shipments = extractUpsShipmentInfo(body, subject);
+          // 동일 BL번호가 있으면 해당 shipment, 없으면 첫 번째 shipment의 tracking 사용
+          const match = shipments.find(s => s.blNumber === blNumber) || shipments[0];
+          if (match?.trackingNumber) trackingNumber = match.trackingNumber;
+        }
+      } catch (bodyErr) {
+        console.error(`[Milestone-v2] Body extraction error for BL ${blNumber}:`, bodyErr);
+      }
+    }
+
+    return { emailDate, emailTime, trackingNumber };
   } catch (error) {
     console.error(`[Milestone-v2] Gmail search error for BL ${blNumber}:`, error);
-    return { emailDate: '', emailTime: '' };
+    return empty;
   }
 }
 
@@ -195,8 +250,8 @@ export default defineEventHandler(async (event) => {
       console.log(`[Milestone-v2] Processing ${++processedCount}/${entries.length}: ${entry.blNumber}`);
 
       // Gmail 조회와 유니패스 조회를 병렬로 실행
-      const [emailTimeResult, unipassResult] = await Promise.all([
-        fetchEmailTime(gmail, entry.blNumber),
+      const [emailInfoResult, unipassResult] = await Promise.all([
+        fetchEmailInfo(gmail, entry.blNumber),
         fetchUnipassData(entry.blNumber, blYear)
       ]);
 
@@ -204,8 +259,9 @@ export default defineEventHandler(async (event) => {
         blNumber: entry.blNumber,
         loadId: entry.loadId,
         carrierCode: entry.carrierCode,
-        emailDate: emailTimeResult.emailDate,
-        emailTime: emailTimeResult.emailTime,
+        emailDate: emailInfoResult.emailDate,
+        emailTime: emailInfoResult.emailTime,
+        trackingNumber: emailInfoResult.trackingNumber,
         ...unipassResult
       });
 
