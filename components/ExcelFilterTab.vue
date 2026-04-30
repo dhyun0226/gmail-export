@@ -1,8 +1,8 @@
 <template>
   <div>
-    <div class="page-header mb-8">
-      <h1 class="page-title">엑셀 필터링</h1>
-      <p class="page-subtitle">대용량 엑셀 파일에서 원하는 열 기준으로 행을 추출하는 프로그램입니다.</p>
+    <div class="mb-6">
+      <h2 class="text-xl font-bold text-gray-900 mb-1">엑셀 필터링</h2>
+      <p class="text-sm text-gray-500">대용량 엑셀 파일에서 원하는 열 기준으로 행을 추출하는 프로그램입니다.</p>
     </div>
 
     <!-- 프로그램 다운로드 -->
