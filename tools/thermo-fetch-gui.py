@@ -38,23 +38,43 @@ def clean(s: str | None) -> str:
     return html.unescape(s).strip() if s else ""
 
 
-def fetch_one(session: requests.Session, catalog: str) -> tuple[str, str, str, str]:
-    """Returns (catalog, name, description, url)."""
-    url = PDP_URL.format(cat=catalog)
+def _try(session: requests.Session, cat: str) -> tuple[str, str, str] | None:
+    """단일 시도. 성공시 (name, desc, url), 실패시 None."""
+    url = PDP_URL.format(cat=cat)
     try:
         r = session.get(url, headers=HEADERS, timeout=25, allow_redirects=True)
-        if r.status_code != 200:
-            return catalog, MISSING, MISSING, url
-        body = r.text
-        m_name = RX_NAME.search(body)
-        m_desc = RX_DESC.search(body)
-        name = clean(m_name.group(1) if m_name else "")
-        if not name:
-            return catalog, MISSING, MISSING, url
-        desc = clean(m_desc.group(1) if m_desc else "")
-        return catalog, name, desc, url
     except requests.RequestException:
-        return catalog, MISSING, MISSING, url
+        return None
+    if r.status_code != 200:
+        return None
+    body = r.text
+    m_name = RX_NAME.search(body)
+    if not m_name:
+        return None
+    name = clean(m_name.group(1))
+    if not name:
+        return None
+    m_desc = RX_DESC.search(body)
+    desc = clean(m_desc.group(1) if m_desc else "")
+    return name, desc, url
+
+
+def _candidates(catalog: str) -> list[str]:
+    """엑셀 자동 숫자변환으로 앞 0이 잘린 경우 대비, 6자리 zfill 폴백 추가."""
+    cands = [catalog]
+    if catalog.isdigit() and 1 <= len(catalog) < 6:
+        cands.append(catalog.zfill(6))
+    return cands
+
+
+def fetch_one(session: requests.Session, catalog: str) -> tuple[str, str, str, str]:
+    """Returns (catalog, name, description, url)."""
+    for cat in _candidates(catalog):
+        hit = _try(session, cat)
+        if hit:
+            name, desc, url = hit
+            return cat, name, desc, url
+    return catalog, MISSING, MISSING, PDP_URL.format(cat=catalog)
 
 
 def load_catalogs(path: Path) -> list[str]:
