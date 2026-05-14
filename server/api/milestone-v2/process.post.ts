@@ -129,16 +129,27 @@ async function fetchEmailInfo(
 ): Promise<{ emailDate: string; emailTime: string; trackingNumber: string }> {
   const empty = { emailDate: '', emailTime: '', trackingNumber: '' };
   try {
-    // BL번호로 Gmail 검색
-    const response = await gmail.users.messages.list({
+    // 1차: 제목에서 BL번호 검색 (일반 BL — 기존 동작 그대로 유지)
+    let response = await gmail.users.messages.list({
       userId: 'me',
       q: `subject:${blNumber}`,
       maxResults: 1
     });
+    let messages = response.data.messages || [];
 
-    const messages = response.data.messages || [];
+    // 2차 폴백: 제목 매칭 실패 시 UPS Pre-Alert 메일에 한정해서 본문 검색.
+    // UPS Pre-Alert는 제목에 BL번호가 없고 본문 표에만 들어있음.
+    // 검색을 from:ups + subject:[Pre-Alert] 로 좁혀 false positive 차단.
     if (messages.length === 0) {
-      return empty;
+      const fallback = await gmail.users.messages.list({
+        userId: 'me',
+        q: `from:ups subject:[Pre-Alert] ${blNumber}`,
+        maxResults: 1
+      });
+      messages = fallback.data.messages || [];
+      if (messages.length === 0) {
+        return empty;
+      }
     }
 
     // 첫 번째 매칭 메일의 상세 정보 (본문 포함)

@@ -38,11 +38,13 @@ export default defineEventHandler(async (event) => {
 
   for (const result of data) {
     // 규칙:
-    //  - Load ID가 있는 경우 → SystemLoadID=loadId, TrackingNumber=공란
-    //  - Load ID가 없는 경우 → SystemLoadID=공란, TrackingNumber=메일에서 추출한 UPS tracking
+    //  - SystemLoadID: 엑셀 R열의 Load ID가 있으면 사용, 없으면 공란
+    //  - TrackingNumber: 메일에서 추출한 UPS tracking 그대로 사용 (Load ID 유무 무관)
+    //    process.post.ts는 UPS Pre-Alert 메일에서만 trackingNumber를 채우므로
+    //    일반 BL 행은 자동으로 ''가 되어 기존 출력과 동일하다.
     const hasLoadId = !!(result.loadId && String(result.loadId).trim());
     const systemLoadId = hasLoadId ? String(result.loadId).trim() : '';
-    const trackingNumber = hasLoadId ? '' : (result.trackingNumber || '');
+    const trackingNumber = (result.trackingNumber || '').trim();
 
     const common = {
       brokerName: 'TOPCUSTOM',
