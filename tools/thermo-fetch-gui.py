@@ -29,32 +29,51 @@ HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
 }
-RX_NAME = re.compile(r'<h1[^>]*role="heading"[^>]*>([^<]+)</h1>')
-RX_DESC = re.compile(r'<div class="short-description">([^<]+)</div>')
+RX_NAME = re.compile(
+    r'<h1[^>]*role="heading"[^>]*>\s*(.*?)\s*</h1>', re.S
+)
+RX_DESC = re.compile(
+    r'<div class="short-description">\s*(.*?)\s*</div>', re.S
+)
+RX_TAG = re.compile(r"<[^>]+>")
+RX_WS = re.compile(r"\s+")
 MISSING = "없음"
 
 
 def clean(s: str | None) -> str:
-    return html.unescape(s).strip() if s else ""
+    if not s:
+        return ""
+    return RX_WS.sub(" ", RX_TAG.sub(" ", html.unescape(s))).strip()
 
 
-def fetch_one(session: requests.Session, catalog: str) -> tuple[str, str, str, str]:
-    """Returns (catalog, name, description, url)."""
+def fetch_one(
+    session: requests.Session, catalog: str
+) -> tuple[str, str, str, str, str]:
+    """Returns (catalog, name, description, url, status).
+
+    status ∈ {"ok", "없음", "봉쇄", "오류:..."}
+    """
     url = PDP_URL.format(cat=catalog)
     try:
         r = session.get(url, headers=HEADERS, timeout=25, allow_redirects=True)
-        if r.status_code != 200:
-            return catalog, MISSING, MISSING, url
-        body = r.text
-        m_name = RX_NAME.search(body)
-        m_desc = RX_DESC.search(body)
-        name = clean(m_name.group(1) if m_name else "")
-        if not name:
-            return catalog, MISSING, MISSING, url
-        desc = clean(m_desc.group(1) if m_desc else "")
-        return catalog, name, desc, url
-    except requests.RequestException:
-        return catalog, MISSING, MISSING, url
+    except requests.RequestException as e:
+        return catalog, MISSING, MISSING, url, f"오류:{type(e).__name__}"
+
+    if r.status_code == 403:
+        return catalog, MISSING, MISSING, url, "봉쇄"
+    if r.status_code == 404:
+        return catalog, MISSING, MISSING, url, "없음"
+    if r.status_code != 200:
+        return catalog, MISSING, MISSING, url, f"오류:HTTP{r.status_code}"
+
+    body = r.text
+    m_name = RX_NAME.search(body)
+    m_desc = RX_DESC.search(body)
+    name = clean(m_name.group(1) if m_name else "")
+    if not name:
+        return catalog, MISSING, MISSING, url, "없음"
+    desc = clean(m_desc.group(1) if m_desc else "")
+    return catalog, name, desc, url, "ok"
 
 
 def load_catalogs(path: Path) -> list[str]:
@@ -182,16 +201,17 @@ class App(tk.Tk):
         self.log_line("중지 요청…")
 
     def _run(self, catalogs: list[str]) -> None:
-        results: list[tuple[str, str, str, str] | None] = [None] * len(catalogs)
-        ok = 0
-        miss = 0
+        results: list[tuple[str, str, str, str, str] | None] = [None] * len(catalogs)
+        counts = {"ok": 0, "없음": 0, "봉쇄": 0, "오류": 0, "취소": 0}
         workers = max(1, min(10, self.workers_var.get()))
         session = requests.Session()
         started = time.time()
 
-        def task(idx: int, cat: str) -> tuple[int, tuple[str, str, str, str]]:
+        def task(
+            idx: int, cat: str
+        ) -> tuple[int, tuple[str, str, str, str, str]]:
             if self.cancel_flag.is_set():
-                return idx, (cat, MISSING, MISSING, PDP_URL.format(cat=cat))
+                return idx, (cat, MISSING, MISSING, PDP_URL.format(cat=cat), "취소")
             time.sleep(random.uniform(0.3, 0.8))
             return idx, fetch_one(session, cat)
 
@@ -202,28 +222,21 @@ class App(tk.Tk):
                 for fut in as_completed(futs):
                     idx, row = fut.result()
                     results[idx] = row
+                    status = row[4]
+                    bucket = "오류" if status.startswith("오류") else status
+                    counts[bucket] = counts.get(bucket, 0) + 1
                     done += 1
-                    if row[1] == MISSING:
-                        miss += 1
-                        mark = "없음"
-                    else:
-                        ok += 1
-                        mark = "OK"
                     self.after(
                         0,
                         self._tick,
                         done,
                         len(catalogs),
-                        ok,
-                        miss,
+                        dict(counts),
                         row[0],
                         row[1],
-                        mark,
+                        status,
                         started,
                     )
-                    if self.cancel_flag.is_set():
-                        # 남은 future들도 task() 안에서 자동으로 MISSING 처리
-                        pass
         except Exception as e:  # noqa: BLE001
             self.after(0, messagebox.showerror, "오류", str(e))
             self.after(0, self._finish_ui)
@@ -232,7 +245,13 @@ class App(tk.Tk):
         # 미처리 슬롯 채우기 (중지 시 대비)
         for i, r in enumerate(results):
             if r is None:
-                results[i] = (catalogs[i], MISSING, MISSING, PDP_URL.format(cat=catalogs[i]))
+                results[i] = (
+                    catalogs[i],
+                    MISSING,
+                    MISSING,
+                    PDP_URL.format(cat=catalogs[i]),
+                    "취소",
+                )
 
         out_path = self.input_path.parent / (
             "결과_" + dt.datetime.now().strftime("%Y%m%d_%H%M%S") + ".xlsx"
@@ -240,42 +259,59 @@ class App(tk.Tk):
         wb = Workbook()
         ws = wb.active
         ws.title = "결과"
-        ws.append(["카탈로그 번호", "이름", "설명", "URL"])
+        ws.append(["카탈로그 번호", "이름", "설명", "URL", "상태"])
         for r in results:
             ws.append(list(r))
-        for col, w in zip("ABCD", [16, 60, 80, 60]):
+        for col, w in zip("ABCDE", [16, 60, 80, 60, 12]):
             ws.column_dimensions[col].width = w
         wb.save(out_path)
 
         elapsed = time.time() - started
-        self.after(
-            0,
-            self.log_line,
-            f"완료. ok={ok} 없음={miss} 시간={elapsed:.1f}s -> {out_path}",
+        summary = (
+            f"완료. ok={counts['ok']} 없음={counts['없음']} "
+            f"봉쇄={counts['봉쇄']} 오류={counts['오류']} 취소={counts['취소']} "
+            f"시간={elapsed:.1f}s -> {out_path}"
         )
+        self.after(0, self.log_line, summary)
         self.after(0, self.status_var.set, f"완료: {out_path}")
         self.after(0, self._finish_ui)
-        self.after(0, lambda: messagebox.showinfo("완료", f"결과 저장:\n{out_path}"))
+        retry_hint = ""
+        if counts["봉쇄"] or counts["오류"]:
+            retry_hint = (
+                "\n\n※ 봉쇄/오류 항목은 잠시 후 동시 요청 수를 줄여 재시도하면 "
+                "잡힐 수 있습니다."
+            )
+        self.after(
+            0,
+            lambda: messagebox.showinfo(
+                "완료", f"결과 저장:\n{out_path}{retry_hint}"
+            ),
+        )
 
     def _tick(
         self,
         done: int,
         total: int,
-        ok: int,
-        miss: int,
+        counts: dict,
         cat: str,
         name: str,
-        mark: str,
+        status: str,
         started: float,
     ) -> None:
         self.progress.config(value=done)
         elapsed = time.time() - started
         rate = done / elapsed if elapsed > 0 else 0
         eta = (total - done) / rate if rate > 0 else 0
-        self.status_var.set(
-            f"{done}/{total}  성공:{ok}  없음:{miss}  속도:{rate:.1f}/s  남은시간:{int(eta)}s"
-        )
-        self.log_line(f"[{done}/{total}] {mark} {cat}  {name[:60]}")
+        parts = [f"{done}/{total}"]
+        for key in ("ok", "없음", "봉쇄", "오류"):
+            if counts.get(key):
+                label = "성공" if key == "ok" else key
+                parts.append(f"{label}:{counts[key]}")
+        parts.append(f"속도:{rate:.1f}/s")
+        parts.append(f"남은시간:{int(eta)}s")
+        self.status_var.set("  ".join(parts))
+        mark = "OK" if status == "ok" else status
+        self.log_line(f"[{done}/{total}] {mark:<8} {cat}  {name[:60]}")
 
     def _finish_ui(self) -> None:
         self.start_btn.config(state="normal")

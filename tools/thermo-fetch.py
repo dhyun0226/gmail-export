@@ -34,9 +34,15 @@ HEADERS = {
 }
 
 RX_BRAND = re.compile(r'<div class="umbrella-brand">([^<]+)</div>')
-RX_NAME = re.compile(r'<h1[^>]*role="heading"[^>]*>([^<]+)</h1>')
-RX_DESC = re.compile(r'<div class="short-description">([^<]+)</div>')
+RX_NAME = re.compile(
+    r'<h1[^>]*role="heading"[^>]*>\s*(.*?)\s*</h1>', re.S
+)
+RX_DESC = re.compile(
+    r'<div class="short-description">\s*(.*?)\s*</div>', re.S
+)
 RX_CAT = re.compile(r'pdp-table-product-selector__catalog-number">([^<]+)<')
+RX_TAG = re.compile(r"<[^>]+>")
+RX_WS = re.compile(r"\s+")
 
 
 @dataclass
@@ -51,7 +57,7 @@ class Row:
 def _clean(s: str | None) -> str:
     if not s:
         return ""
-    return html.unescape(s).strip()
+    return RX_WS.sub(" ", RX_TAG.sub(" ", html.unescape(s))).strip()
 
 
 def fetch_one(session: requests.Session, catalog: str, timeout: int = 20) -> Row:
