@@ -75,51 +75,78 @@ const formatTime = (dateTimeString: string | number) => {
   return `${s.substring(8, 10)}:${s.substring(10, 12)}`;
 };
 
-// 유니패스 API 호출 함수
-async function fetchUnipassData(blNumber: string, blYear: string) {
-  if (!blNumber) return { acceptanceDate: '', acceptanceTime: '', clearanceDate: '', clearanceTime: '' };
+// 유니패스 단발 호출 (실패 시 throw — 재시도는 호출부에서)
+async function fetchUnipassDataOnce(blNumber: string, blYear: string) {
+  const apiUrl = `https://unipass.customs.go.kr:38010/ext/rest/cargCsclPrgsInfoQry/retrieveCargCsclPrgsInfo`;
+  const config = useRuntimeConfig();
+  const params = new URLSearchParams({
+    crkyCn: config.unipassApiKey,
+    blYy: blYear,
+    hblNo: blNumber
+  });
 
-  try {
-    const apiUrl = `https://unipass.customs.go.kr:38010/ext/rest/cargCsclPrgsInfoQry/retrieveCargCsclPrgsInfo`;
-    const config = useRuntimeConfig();
-    const params = new URLSearchParams({
-      crkyCn: config.unipassApiKey,
-      blYy: blYear,
-      hblNo: blNumber
-    });
+  const response = await httpsRequest(`${apiUrl}?${params}`);
 
-    const response = await httpsRequest(`${apiUrl}?${params}`);
+  // 응답이 빈 문자열이거나 XML 구조가 아니면 일시 장애로 간주
+  if (!response || !response.includes('<')) {
+    throw new Error(`Invalid response (length=${response?.length || 0})`);
+  }
 
-    let acceptanceDate = '';
-    let acceptanceTime = '';
-    let clearanceDate = '';
-    let clearanceTime = '';
+  let acceptanceDate = '';
+  let acceptanceTime = '';
+  let clearanceDate = '';
+  let clearanceTime = '';
 
-    const parser = new XMLParser();
-    const parsedXml = parser.parse(response);
-    const detailsNode = parsedXml?.cargCsclPrgsInfoQryRtnVo?.cargCsclPrgsInfoDtlQryVo;
+  const parser = new XMLParser();
+  const parsedXml = parser.parse(response);
+  const detailsNode = parsedXml?.cargCsclPrgsInfoQryRtnVo?.cargCsclPrgsInfoDtlQryVo;
 
-    if (detailsNode) {
-      const detailsList = Array.isArray(detailsNode) ? detailsNode : [detailsNode];
-      for (const detail of detailsList) {
-        const eventType = detail.cargTrcnRelaBsopTpcd;
-        const processTime = detail.prcsDttm;
-        if (eventType === '수입신고' && !acceptanceDate) {
-          acceptanceDate = formatDate(processTime);
-          acceptanceTime = formatTime(processTime);
-        }
-        if (eventType === '수입신고수리') {
-          clearanceDate = formatDate(processTime);
-          clearanceTime = formatTime(processTime);
-        }
+  if (detailsNode) {
+    const detailsList = Array.isArray(detailsNode) ? detailsNode : [detailsNode];
+    for (const detail of detailsList) {
+      const eventType = detail.cargTrcnRelaBsopTpcd;
+      const processTime = detail.prcsDttm;
+      if (eventType === '수입신고' && !acceptanceDate) {
+        acceptanceDate = formatDate(processTime);
+        acceptanceTime = formatTime(processTime);
+      }
+      if (eventType === '수입신고수리') {
+        clearanceDate = formatDate(processTime);
+        clearanceTime = formatTime(processTime);
       }
     }
-
-    return { acceptanceDate, acceptanceTime, clearanceDate, clearanceTime };
-  } catch (error) {
-    console.error(`[Milestone-v2] Unipass error for BL ${blNumber}:`, error);
-    return { acceptanceDate: '', acceptanceTime: '', clearanceDate: '', clearanceTime: '' };
   }
+
+  return { acceptanceDate, acceptanceTime, clearanceDate, clearanceTime };
+}
+
+// 유니패스 호출 (자동 재시도) — 일시 장애로 SC/CT가 통째로 빠지는 문제 방지
+async function fetchUnipassData(blNumber: string, blYear: string) {
+  const empty = { acceptanceDate: '', acceptanceTime: '', clearanceDate: '', clearanceTime: '', unipassFailed: false };
+  if (!blNumber) return empty;
+
+  const maxAttempts = 3;
+  let lastError: any = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await fetchUnipassDataOnce(blNumber, blYear);
+      if (attempt > 1) {
+        console.log(`[Milestone-v2] Unipass OK on attempt ${attempt}/${maxAttempts} for BL ${blNumber}`);
+      }
+      return { ...result, unipassFailed: false };
+    } catch (error) {
+      lastError = error;
+      const msg = error instanceof Error ? error.message : String(error);
+      console.warn(`[Milestone-v2] Unipass attempt ${attempt}/${maxAttempts} failed for BL ${blNumber}: ${msg}`);
+      if (attempt < maxAttempts) {
+        // 지수 backoff: 500ms → 1000ms
+        await new Promise(r => setTimeout(r, 500 * attempt));
+      }
+    }
+  }
+
+  console.error(`[Milestone-v2] Unipass FAILED for BL ${blNumber} after ${maxAttempts} attempts:`, lastError);
+  return { ...empty, unipassFailed: true };
 }
 
 // Gmail에서 BL번호로 메일 수신시간 + (UPS Pre-Alert일 경우) Tracking 번호 조회
@@ -280,14 +307,21 @@ export default defineEventHandler(async (event) => {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    console.log(`[Milestone-v2] Completed. ${results.length} entries processed`);
+    const unipassFailures = results.filter((r: any) => r.unipassFailed).map((r: any) => r.blNumber);
+    console.log(`[Milestone-v2] Completed. ${results.length} entries processed, unipass failures: ${unipassFailures.length}`);
+
+    const baseMessage = `${results.length}개의 BL번호에 대한 조회가 완료되었습니다.`;
+    const message = unipassFailures.length > 0
+      ? `${baseMessage} (유니패스 조회 실패: ${unipassFailures.length}건 — ${unipassFailures.slice(0, 3).join(', ')}${unipassFailures.length > 3 ? ' …' : ''})`
+      : baseMessage;
 
     return {
       success: true,
-      message: `${results.length}개의 BL번호에 대한 조회가 완료되었습니다.`,
+      message,
       results,
       totalCount: results.length,
-      processedCount: results.filter(r => r.emailDate || r.acceptanceDate || r.clearanceDate).length
+      processedCount: results.filter(r => r.emailDate || r.acceptanceDate || r.clearanceDate).length,
+      unipassFailures
     };
 
   } catch (error: any) {
