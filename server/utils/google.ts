@@ -24,16 +24,24 @@ export function getAuthUrl(client: any) {
   });
 }
 
-export async function getGmailClient(accessToken: string) {
+// refresh_token 까지 같이 넘기면 googleapis 가 access_token 만료 시 자동 재발급한다.
+// 없이 호출하면 기존 동작 유지 (1시간 만료 후 401).
+export async function getGmailClient(accessToken: string, refreshToken?: string) {
   const auth = getGoogleAuthClient();
-  auth.setCredentials({ access_token: accessToken });
-  
+  auth.setCredentials({
+    access_token: accessToken,
+    ...(refreshToken ? { refresh_token: refreshToken } : {})
+  });
+
   return google.gmail({ version: 'v1', auth });
 }
 
-export async function getDriveClient(accessToken: string) {
+export async function getDriveClient(accessToken: string, refreshToken?: string) {
   const auth = getGoogleAuthClient();
-  auth.setCredentials({ access_token: accessToken });
-  
+  auth.setCredentials({
+    access_token: accessToken,
+    ...(refreshToken ? { refresh_token: refreshToken } : {})
+  });
+
   return google.drive({ version: 'v3', auth });
 }

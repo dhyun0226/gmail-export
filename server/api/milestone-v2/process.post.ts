@@ -231,6 +231,7 @@ export default defineEventHandler(async (event) => {
   console.log('[Milestone-v2] Starting processing');
 
   const accessToken = getCookie(event, 'access_token');
+  const refreshToken = getCookie(event, 'refresh_token');
   if (!accessToken) {
     throw createError({ statusCode: 401, statusMessage: '로그인이 필요합니다.' });
   }
@@ -277,8 +278,19 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'F열에서 BL번호를 찾을 수 없습니다.' });
     }
 
-    // 4. Gmail 클라이언트 생성
-    const gmail = await getGmailClient(accessToken);
+    // 4. Gmail 클라이언트 생성 (refresh_token 같이 넘겨 자동 재발급 활성화)
+    const gmail = await getGmailClient(accessToken, refreshToken);
+
+    // 4-1. 토큰 유효성 사전 점검 — 만료/취소 시 명확한 401 노출 (이전엔 무한 빈값으로 빠짐)
+    try {
+      await gmail.users.getProfile({ userId: 'me' });
+    } catch (authErr: any) {
+      console.error('[Milestone-v2] Gmail auth check failed:', authErr?.message || authErr);
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Gmail 인증이 만료되었습니다. 다시 로그인해 주세요.'
+      });
+    }
 
     // 5. 각 BL번호에 대해 Gmail 조회 + 유니패스 조회
     const results = [];
