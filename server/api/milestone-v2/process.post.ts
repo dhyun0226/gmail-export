@@ -38,11 +38,19 @@ function extractBody(messagePart: any, depth: number = 0): string {
   return '';
 }
 
-// HTTPS 요청 함수
-function httpsRequest(url: string): Promise<string> {
+// 모듈 레벨 keep-alive Agent — TCP/TLS 세션 재사용으로 cold-start 비용 한번만 지불
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 10,
+  rejectUnauthorized: false
+});
+
+// HTTPS 요청 함수 (timeout 옵션 추가)
+function httpsRequest(url: string, timeoutMs: number = 25000): Promise<string> {
   return new Promise((resolve, reject) => {
     const req = https.get(url, {
       rejectUnauthorized: false,
+      agent: httpsAgent,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': '*/*'
@@ -53,7 +61,7 @@ function httpsRequest(url: string): Promise<string> {
       res.on('end', () => { resolve(data); });
     });
     req.on('error', (error) => { reject(error); });
-    req.setTimeout(15000, () => {
+    req.setTimeout(timeoutMs, () => {
       req.destroy();
       reject(new Error('Request timeout'));
     });
@@ -290,6 +298,18 @@ export default defineEventHandler(async (event) => {
         statusCode: 401,
         statusMessage: 'Gmail 인증이 만료되었습니다. 다시 로그인해 주세요.'
       });
+    }
+
+    // 4-2. 유니패스 connection warmup — 첫 BL이 cold-start TLS handshake 비용을 떠안다 실패하는 문제 차단
+    try {
+      const warmupConfig = useRuntimeConfig();
+      const warmupUrl = `https://unipass.customs.go.kr:38010/ext/rest/cargCsclPrgsInfoQry/retrieveCargCsclPrgsInfo?crkyCn=${warmupConfig.unipassApiKey}&blYy=2026&hblNo=WARMUP`;
+      const t0 = Date.now();
+      await httpsRequest(warmupUrl, 20000);
+      console.log(`[Milestone-v2] Unipass warmup OK (${Date.now() - t0}ms)`);
+    } catch (warmupErr: any) {
+      // warmup 실패해도 본 처리는 계속 (재시도 로직이 잡아줌)
+      console.warn(`[Milestone-v2] Unipass warmup failed (will continue): ${warmupErr?.message}`);
     }
 
     // 5. 각 BL번호에 대해 Gmail 조회 + 유니패스 조회
