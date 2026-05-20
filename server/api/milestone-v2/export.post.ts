@@ -46,6 +46,15 @@ export default defineEventHandler(async (event) => {
     const systemLoadId = hasLoadId ? String(result.loadId).trim() : '';
     const trackingNumber = (result.trackingNumber || '').trim();
 
+    // 재조회 태그 — 어제 누락분만 재출력하도록 마일스톤별 출력 여부 결정.
+    //  '' (신규)    → DR/SC/CT 다 출력
+    //  'SC,CT'     → SC, CT만 (DR 어제 들어감)
+    //  'CT'        → CT만 (DR/SC 어제 들어감)
+    const reFetchTag = String(result.reFetchTag || '');
+    const emitDR = reFetchTag === '';
+    const emitSC = reFetchTag === '' || reFetchTag === 'SC,CT';
+    const emitCT = reFetchTag === '' || reFetchTag === 'SC,CT' || reFetchTag === 'CT';
+
     const common = {
       brokerName: 'TOPCUSTOM',
       carrierCode: result.carrierCode || '',
@@ -58,7 +67,7 @@ export default defineEventHandler(async (event) => {
     };
 
     // DR - Gmail 메일 수신시간
-    if (result.emailDate) {
+    if (emitDR && result.emailDate) {
       drRows.push({
         ...common,
         secCode: 'DR',
@@ -68,7 +77,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // SC - 유니패스 통관접수시간
-    if (result.acceptanceDate && result.acceptanceTime) {
+    if (emitSC && result.acceptanceDate && result.acceptanceTime) {
       scRows.push({
         ...common,
         secCode: 'SC',
@@ -78,7 +87,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // CT - 유니패스 수리시간
-    if (result.clearanceDate && result.clearanceTime) {
+    if (emitCT && result.clearanceDate && result.clearanceTime) {
       ctRows.push({
         ...common,
         secCode: 'CT',

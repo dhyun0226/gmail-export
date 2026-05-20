@@ -79,10 +79,18 @@
       <div class="flex gap-2">
         <button
           @click="downloadCsv"
-          :disabled="downloading"
+          :disabled="downloading || downloadingIteration"
           class="btn btn-primary btn-md flex-1"
         >
           {{ downloading ? '다운로드 중...' : 'CSV 다운로드' }}
+        </button>
+        <button
+          @click="downloadIteration"
+          :disabled="downloading || downloadingIteration"
+          class="btn btn-secondary btn-md flex-1"
+          title="아직 SC/CT 누락된 BL 만 추려서 엑셀로 받음. 다음날 신규 리스트 끝에 붙여넣고 재업로드하면 누락분만 재조회됨."
+        >
+          {{ downloadingIteration ? '다운로드 중...' : '재조회용 엑셀' }}
         </button>
       </div>
       <button
@@ -106,6 +114,7 @@ const isDragging = ref(false);
 const elapsedTime = ref(0);
 const timerInterval = ref<NodeJS.Timeout | null>(null);
 const downloading = ref(false);
+const downloadingIteration = ref(false);
 
 const emit = defineEmits<{
   error: [message: string]
@@ -224,6 +233,38 @@ const downloadCsv = async () => {
     emit('error', 'CSV 다운로드 중 오류가 발생했습니다.');
   } finally {
     downloading.value = false;
+  }
+};
+
+const downloadIteration = async () => {
+  if (!result.value) return;
+
+  downloadingIteration.value = true;
+
+  try {
+    const response = await fetch('/api/milestone-v2/export-iteration', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: result.value.results }),
+    });
+
+    if (!response.ok) throw new Error('다운로드에 실패했습니다.');
+
+    const blob = await response.blob();
+    if (blob.size === 0) {
+      emit('error', '재조회 대상 BL 이 없습니다. (모두 정상 조회됨)');
+      return;
+    }
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `iteration_${new Date().toISOString().split('T')[0]}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  } catch (err: any) {
+    emit('error', '재조회용 엑셀 다운로드 중 오류가 발생했습니다.');
+  } finally {
+    downloadingIteration.value = false;
   }
 };
 

@@ -235,6 +235,17 @@ function cleanBlNumber(blNumber: string): string {
   return blNumber.toString().trim().replace(/[\s-]/g, '').toUpperCase();
 }
 
+// T열 값 정규화 — 누락 마커. 어제 못 받은 마일스톤만 재조회/재출력하기 위한 태그.
+// 빈 칸='' (신규, 전체조회) / 'SC,CT' (둘다 누락; "SC" 단독은 CT도 자동 누락) / 'CT' (CT만 누락).
+type ReFetchTag = '' | 'SC,CT' | 'CT';
+function normalizeReFetchTag(raw: string): ReFetchTag {
+  const v = String(raw || '').toUpperCase().replace(/\s/g, '');
+  if (!v) return '';
+  if (v === 'SC' || v === 'SC,CT' || v === 'CT,SC') return 'SC,CT';
+  if (v === 'CT') return 'CT';
+  return ''; // 알 수 없는 값은 신규로 처리
+}
+
 export default defineEventHandler(async (event) => {
   console.log('[Milestone-v2] Starting processing');
 
@@ -267,16 +278,24 @@ export default defineEventHandler(async (event) => {
     const ws = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 'A', defval: '' });
 
-    // 3. F열(BL번호), R열(Load ID), S열(Carrier Code) 추출
-    const entries: Array<{ blNumber: string; loadId: string; carrierCode: string }> = [];
+    // 3. F열(BL번호), R열(Load ID), S열(Carrier Code), T열(재조회 태그) 추출
+    //    + 재조회용 엑셀 출력에 쓰기 위해 원본 행 전체도 보존
+    const entries: Array<{
+      blNumber: string;
+      loadId: string;
+      carrierCode: string;
+      reFetchTag: ReFetchTag;
+      originalRow: any;
+    }> = [];
     for (let i = 1; i < rows.length; i++) { // 헤더(0행) 제외
       const row = rows[i] as any;
       const blNumber = cleanBlNumber(row['F']?.toString() || '');
       const loadId = (row['R']?.toString() || '').trim();
       const carrierCode = (row['S']?.toString() || '').trim();
+      const reFetchTag = normalizeReFetchTag(row['T']?.toString() || '');
 
       if (blNumber) {
-        entries.push({ blNumber, loadId, carrierCode });
+        entries.push({ blNumber, loadId, carrierCode, reFetchTag, originalRow: row });
       }
     }
 
@@ -317,18 +336,28 @@ export default defineEventHandler(async (event) => {
     let processedCount = 0;
 
     for (const entry of entries) {
-      console.log(`[Milestone-v2] Processing ${++processedCount}/${entries.length}: ${entry.blNumber}`);
+      console.log(`[Milestone-v2] Processing ${++processedCount}/${entries.length}: ${entry.blNumber}${entry.reFetchTag ? ' [재조회: ' + entry.reFetchTag + ']' : ''}`);
 
-      // Gmail 조회와 유니패스 조회를 병렬로 실행
-      const [emailInfoResult, unipassResult] = await Promise.all([
-        fetchEmailInfo(gmail, entry.blNumber),
-        fetchUnipassData(entry.blNumber, blYear)
-      ]);
+      // 재조회 행(T열 채워짐) 은 Gmail/Tracking 스킵 — DR 은 어제 이미 TMS 에 들어갔음.
+      // 신규 행(T열 빈칸) 은 기존대로 Gmail + 유니패스 둘 다 병렬 조회.
+      let emailInfoResult: { emailDate: string; emailTime: string; trackingNumber: string };
+      let unipassResult: any;
+      if (entry.reFetchTag) {
+        emailInfoResult = { emailDate: '', emailTime: '', trackingNumber: '' };
+        unipassResult = await fetchUnipassData(entry.blNumber, blYear);
+      } else {
+        [emailInfoResult, unipassResult] = await Promise.all([
+          fetchEmailInfo(gmail, entry.blNumber),
+          fetchUnipassData(entry.blNumber, blYear)
+        ]);
+      }
 
       results.push({
         blNumber: entry.blNumber,
         loadId: entry.loadId,
         carrierCode: entry.carrierCode,
+        reFetchTag: entry.reFetchTag,
+        originalRow: entry.originalRow,
         emailDate: emailInfoResult.emailDate,
         emailTime: emailInfoResult.emailTime,
         trackingNumber: emailInfoResult.trackingNumber,
