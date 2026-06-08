@@ -18,6 +18,10 @@ const patterns = [
   // DHL 패턴 (숫자만 추출)
   { name: 'DHL', regex: /DHL\s+(\d+)/ },
   
+  // HBL(...) 괄호 안 값 우선 추출 (예: ...SRN(E000...);...;HBL(1074975288);... → 1074975288)
+  // 반드시 DGF_REPLY_PATTERN 보다 위에 둘 것. 아니면 SRN 값이 먼저 잡힘.
+  { name: 'HBL_PAREN', regex: /HBL\(([^)]+)\)/ },
+
   // DGF 응답 메일 패턴 (예: H687676)
   { name: 'DGF_REPLY_PATTERN', regex: /\b([A-Z]\d{6,})\b/ },
 
