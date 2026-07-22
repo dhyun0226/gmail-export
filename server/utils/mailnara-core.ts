@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import type { SearchObject } from 'imapflow'
 import { z } from 'zod'
 
 export type MailnaraConfig = {
@@ -108,6 +109,26 @@ export function parseGmailQuery(query: string): ParsedGmailQuery {
     from,
     subjects,
   }
+}
+
+export function buildImapSearch(query: ParsedGmailQuery): SearchObject {
+  const search: SearchObject = { all: true }
+  if (query.from) search.from = query.from
+  if (query.subjects.length === 1) search.subject = query.subjects[0]
+  if (query.subjects.length > 1) search.or = query.subjects.map(subject => ({ subject }))
+  if (query.text[0]) search.text = query.text[0]
+  return search
+}
+
+export function isMailInDateRange(
+  query: ParsedGmailQuery,
+  headerDate: Date | undefined,
+  internalDate: Date | undefined,
+): boolean {
+  const date = headerDate ?? internalDate
+  if (query.after && (!date || date <= query.after)) return false
+  if (query.before && (!date || date >= query.before)) return false
+  return true
 }
 
 export function encodeMailId(uidValidity: bigint, uid: number): string {

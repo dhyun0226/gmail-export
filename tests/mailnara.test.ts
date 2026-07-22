@@ -3,12 +3,14 @@ import { EventEmitter } from 'node:events'
 import { describe, it } from 'node:test'
 import {
   closeMailClientAfterResponse,
+  buildImapSearch,
   decodeMailId,
   encodeMailId,
   normalizeMailDate,
+  isMailInDateRange,
   parseGmailQuery,
   parseMailnaraConfig,
-} from '../server/utils/mailnara-core.ts'
+} from '../server/utils/mailnara-core'
 
 describe('closeMailClientAfterResponse', () => {
   it('closes the IMAP connection when the HTTP response finishes', () => {
@@ -100,5 +102,21 @@ describe('parseGmailQuery', () => {
       from: 'dhl',
       subjects: ['이고요청e', '이고 요청e'],
     })
+  })
+})
+
+describe('POP-imported mail dates', () => {
+  it('does not send header-date filters as IMAP INTERNALDATE filters', () => {
+    const query = parseGmailQuery('after:1768489200 before:1768575600 has:attachment')
+
+    assert.deepEqual(buildImapSearch(query), { all: true })
+  })
+
+  it('uses the visible message date before the POP import date', () => {
+    const query = parseGmailQuery('after:1768489200 before:1768575600')
+    const headerDate = new Date('2026-01-16T03:00:00.000Z')
+    const importDate = new Date('2026-07-01T03:00:00.000Z')
+
+    assert.equal(isMailInDateRange(query, headerDate, importDate), true)
   })
 })

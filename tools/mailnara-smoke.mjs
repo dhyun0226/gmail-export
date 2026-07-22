@@ -1,4 +1,4 @@
-import { createMailnaraGmailClient } from '../server/utils/mailnara.ts'
+import { createMailnaraGmailClient } from '../server/utils/mailnara'
 
 const client = await createMailnaraGmailClient({
   mailImapHost: process.env.MAIL_IMAP_HOST,
@@ -8,11 +8,9 @@ const client = await createMailnaraGmailClient({
   mailImapPassword: process.env.MAIL_IMAP_PASSWORD,
   mailImapMailbox: process.env.MAIL_IMAP_MAILBOX ?? 'INBOX',
 })
-const since = Math.floor((Date.now() - 180 * 24 * 60 * 60 * 1000) / 1000)
-
 const list = await client.users.messages.list({
   userId: 'me',
-  q: `after:${since} has:attachment`,
+  q: 'has:attachment',
   maxResults: 5,
 })
 const first = list.data.messages[0]

@@ -1,16 +1,21 @@
-import { ImapFlow, type MessageStructureObject, type SearchObject } from 'imapflow'
-import PostalMime, { type Email } from 'postal-mime'
+import {
+  ImapFlow,
+  type MessageEnvelopeObject,
+  type MessageStructureObject,
+} from 'imapflow'
+import PostalMime from 'postal-mime'
 import {
   decodeMailId,
+  buildImapSearch,
   encodeMailId,
   encodeThreadId,
   MailnaraIdentifierError,
+  isMailInDateRange,
   normalizeMailDate,
   parseGmailQuery,
   parseMailnaraConfig,
   type MailnaraConfig,
-  type ParsedGmailQuery,
-} from './mailnara-core.ts'
+} from './mailnara-core'
 
 type GmailHeader = { readonly name: string; readonly value: string }
 type GmailPart = {
@@ -25,7 +30,10 @@ type GmailMessage = {
   readonly threadId: string
   readonly payload: GmailPart & { readonly headers: readonly GmailHeader[] }
 }
-type CachedMail = { readonly message: GmailMessage; readonly parsed: Email }
+type CachedMetadata = {
+  readonly envelope: MessageEnvelopeObject
+  readonly structure: MessageStructureObject | undefined
+}
 
 export class MailnaraAuthError extends Error {
   override readonly name = 'MailnaraAuthError'
@@ -36,63 +44,71 @@ export class MailnaraAuthError extends Error {
   }
 }
 
-function addressText(email: Email): string {
-  const address = email.from?.address ?? ''
-  const name = email.from?.name ?? ''
+function addressText(envelope: MessageEnvelopeObject): string {
+  const from = envelope.from?.[0]
+  const address = from?.address ?? ''
+  const name = from?.name ?? ''
   return name ? `${name} <${address}>` : address
 }
 
-function threadSource(email: Email): string {
-  const references = email.headers.find(header => header.key.toLowerCase() === 'references')?.value
-  const inReplyTo = email.headers.find(header => header.key.toLowerCase() === 'in-reply-to')?.value
-  const normalizedSubject = (email.subject ?? '').replace(/^(re|fw|fwd):\s*/gi, '').trim().toLowerCase()
-  return references?.split(/\s+/)[0] ?? inReplyTo ?? email.messageId ?? normalizedSubject
+function threadSource(envelope: MessageEnvelopeObject): string {
+  const normalizedSubject = (envelope.subject ?? '').replace(/^(re|fw|fwd):\s*/gi, '').trim().toLowerCase()
+  return envelope.inReplyTo ?? envelope.messageId ?? normalizedSubject
 }
 
-function contentBytes(content: string | ArrayBuffer | Uint8Array): Uint8Array {
-  if (typeof content === 'string') return Buffer.from(content)
-  if (content instanceof ArrayBuffer) return new Uint8Array(content)
-  return content
+function structureNodes(structure: MessageStructureObject | undefined): MessageStructureObject[] {
+  if (!structure) return []
+  return [structure, ...(structure.childNodes?.flatMap(structureNodes) ?? [])]
 }
 
-function toGmailMessage(id: string, email: Email): GmailMessage {
-  const date = normalizeMailDate(email.date)
+function attachmentNode(node: MessageStructureObject): boolean {
+  const name = node.dispositionParameters?.filename ?? node.parameters?.name ?? ''
+  return node.disposition?.toLowerCase() === 'attachment' || Boolean(name)
+}
+
+function attachmentId(part: string): string {
+  return `a1.${Buffer.from(part).toString('base64url')}`
+}
+
+function decodeAttachmentId(value: string): string | undefined {
+  const encoded = /^a1\.([A-Za-z0-9_-]+)$/.exec(value)?.[1]
+  return encoded ? Buffer.from(encoded, 'base64url').toString('utf8') : undefined
+}
+
+function toGmailMessage(
+  id: string,
+  metadata: CachedMetadata,
+  bodies: Record<string, { readonly content: Buffer | null }>,
+): GmailMessage {
+  const { envelope, structure } = metadata
+  const date = normalizeMailDate(envelope.date)
   const headers: GmailHeader[] = [
-    { name: 'Subject', value: email.subject ?? '' },
-    { name: 'From', value: addressText(email) },
+    { name: 'Subject', value: envelope.subject ?? '' },
+    { name: 'From', value: addressText(envelope) },
     { name: 'Date', value: date?.toUTCString() ?? '' },
-    { name: 'Message-ID', value: email.messageId ?? '' },
+    { name: 'Message-ID', value: envelope.messageId ?? '' },
   ]
   const parts: GmailPart[] = []
-  if (email.html) {
-    parts.push({ mimeType: 'text/html', body: { data: Buffer.from(email.html).toString('base64url') } })
+  for (const node of structureNodes(structure)) {
+    if (!node.part) continue
+    if (node.type === 'text/html' || node.type === 'text/plain') {
+      const content = bodies[node.part]?.content
+      if (content) parts.push({ mimeType: node.type, body: { data: content.toString('base64url') } })
+      continue
+    }
+    if (attachmentNode(node)) {
+      parts.push({
+        mimeType: node.type,
+        filename: node.dispositionParameters?.filename ?? node.parameters?.name ?? 'attachment',
+        body: { attachmentId: attachmentId(node.part), size: node.size },
+      })
+    }
   }
-  if (email.text) {
-    parts.push({ mimeType: 'text/plain', body: { data: Buffer.from(email.text).toString('base64url') } })
-  }
-  email.attachments.forEach((attachment, index) => {
-    parts.push({
-      mimeType: attachment.mimeType,
-      filename: attachment.filename ?? 'attachment',
-      body: { attachmentId: `a1.${index}`, size: contentBytes(attachment.content).byteLength },
-    })
-  })
   return {
     id,
-    threadId: encodeThreadId(threadSource(email)),
+    threadId: encodeThreadId(threadSource(envelope)),
     payload: { mimeType: 'multipart/mixed', headers, body: {}, parts },
   }
-}
-
-function buildSearch(query: ParsedGmailQuery): SearchObject {
-  const search: SearchObject = { all: true }
-  if (query.after) search.since = query.after
-  if (query.before) search.before = query.before
-  if (query.from) search.from = query.from
-  if (query.subjects.length === 1) search.subject = query.subjects[0]
-  if (query.subjects.length > 1) search.or = query.subjects.map(subject => ({ subject }))
-  if (query.text[0]) search.text = query.text[0]
-  return search
 }
 
 function attachmentMatches(structure: MessageStructureObject | undefined, filename: string | undefined): boolean {
@@ -131,7 +147,8 @@ export class MailnaraGmailClient {
 
   private readonly client: ImapFlow
   private readonly config: MailnaraConfig
-  private readonly cache = new Map<number, CachedMail>()
+  private readonly metadata = new Map<number, CachedMetadata>()
+  private readonly messages = new Map<number, GmailMessage>()
   private closeTimer: ReturnType<typeof setTimeout> | undefined
   private uidValidity = BigInt(0)
 
@@ -167,17 +184,54 @@ export class MailnaraGmailClient {
     this.closeTimer.unref()
   }
 
-  private async load(uid: number): Promise<CachedMail> {
-    const cached = this.cache.get(uid)
+  private async loadMetadata(uid: number): Promise<CachedMetadata> {
+    const cached = this.metadata.get(uid)
     if (cached) return cached
     if (this.closeTimer) clearTimeout(this.closeTimer)
-    const fetched = await this.client.fetchOne(uid.toString(), { source: true }, { uid: true })
-    if (!fetched || !fetched.source) throw new MailnaraIdentifierError()
-    const parsed = await PostalMime.parse(fetched.source)
-    const id = encodeMailId(this.uidValidity, uid)
-    const mail = { parsed, message: toGmailMessage(id, parsed) }
-    this.cache.set(uid, mail)
-    return mail
+    const fetched = await this.client.fetchOne(uid.toString(), { envelope: true, bodyStructure: true }, { uid: true })
+    if (!fetched || !fetched.envelope) throw new MailnaraIdentifierError()
+    const metadata = { envelope: fetched.envelope, structure: fetched.bodyStructure }
+    this.metadata.set(uid, metadata)
+    return metadata
+  }
+
+  private async load(uid: number): Promise<GmailMessage> {
+    const cached = this.messages.get(uid)
+    if (cached) return cached
+    const metadata = await this.loadMetadata(uid)
+    const textParts = structureNodes(metadata.structure)
+      .filter(node => node.part && (node.type === 'text/html' || node.type === 'text/plain'))
+      .map(node => node.part as string)
+    const bodies = textParts.length > 0
+      ? await this.client.downloadMany(uid.toString(), textParts, { uid: true })
+      : {}
+    const message = toGmailMessage(encodeMailId(this.uidValidity, uid), metadata, bodies)
+    this.messages.set(uid, message)
+    return message
+  }
+
+  private async prefetchMessages(uids: readonly number[]): Promise<void> {
+    const parts = [...new Set(uids.flatMap(uid => structureNodes(this.metadata.get(uid)?.structure)
+      .filter(node => node.part && (node.type === 'text/html' || node.type === 'text/plain'))
+      .map(node => node.part as string)))]
+    if (uids.length === 0 || parts.length === 0) return
+    const bodyParts = parts.flatMap(part => [`${part}.mime`, part])
+    const fetched = await this.client.fetchAll([...uids], { bodyParts }, { uid: true })
+    for (const item of fetched) {
+      const metadata = this.metadata.get(item.uid)
+      if (!metadata || !item.bodyParts) continue
+      const bodies: Record<string, { content: Buffer | null }> = {}
+      for (const node of structureNodes(metadata.structure)) {
+        if (!node.part || (node.type !== 'text/html' && node.type !== 'text/plain')) continue
+        const mime = item.bodyParts.get(`${node.part}.mime`)
+        const content = item.bodyParts.get(node.part)
+        if (!content) continue
+        const parsed = await PostalMime.parse(mime ? Buffer.concat([mime, Buffer.from('\r\n'), content]) : content)
+        const text = node.type === 'text/html' ? parsed.html : parsed.text
+        bodies[node.part] = { content: text ? Buffer.from(text) : content }
+      }
+      this.messages.set(item.uid, toGmailMessage(encodeMailId(this.uidValidity, item.uid), metadata, bodies))
+    }
   }
 
   private async getProfile(): Promise<{ readonly data: { readonly emailAddress: string; readonly messagesTotal: number } }> {
@@ -193,25 +247,32 @@ export class MailnaraGmailClient {
   }): Promise<{ readonly data: { readonly messages: readonly { readonly id: string; readonly threadId: string }[]; readonly nextPageToken?: string } }> {
     if (this.closeTimer) clearTimeout(this.closeTimer)
     const query = parseGmailQuery(options.q ?? '')
-    const searchedUids = await this.client.search(buildSearch(query), { uid: true }) || []
+    const searchedUids = await this.client.search(buildImapSearch(query), { uid: true }) || []
     let uids = searchedUids
     if (searchedUids.length > 0 && (query.after || query.before || query.hasAttachment || query.filename)) {
       const metadata = await this.client.fetchAll(
         searchedUids,
-        { internalDate: true, bodyStructure: query.hasAttachment || Boolean(query.filename) },
+        { envelope: true, internalDate: true, bodyStructure: query.hasAttachment || Boolean(query.filename) },
         { uid: true },
       )
       uids = metadata.filter(item => {
-        if (query.after && item.internalDate && item.internalDate <= query.after) return false
-        if (query.before && item.internalDate && item.internalDate >= query.before) return false
+        if (!isMailInDateRange(
+          query,
+          normalizeMailDate(item.envelope?.date),
+          normalizeMailDate(item.internalDate),
+        )) return false
         if ((query.hasAttachment || query.filename) && !attachmentMatches(item.bodyStructure, query.filename)) return false
         return true
-      }).map(item => item.uid)
+      }).map(item => {
+        if (item.envelope) this.metadata.set(item.uid, { envelope: item.envelope, structure: item.bodyStructure })
+        return item.uid
+      })
     }
     const offset = Number(options.pageToken ?? '0')
     const limit = options.maxResults ?? 100
     const page = uids.slice(offset, offset + limit)
     const nextOffset = offset + page.length
+    await this.prefetchMessages(page)
     this.scheduleClose()
     return {
       data: {
@@ -227,7 +288,7 @@ export class MailnaraGmailClient {
   private async get(options: { readonly id: string }): Promise<{ readonly data: GmailMessage }> {
     const identity = decodeMailId(options.id)
     if (identity.uidValidity !== this.uidValidity) throw new MailnaraIdentifierError()
-    const message = (await this.load(identity.uid)).message
+    const message = await this.load(identity.uid)
     this.scheduleClose()
     return { data: message }
   }
@@ -238,12 +299,16 @@ export class MailnaraGmailClient {
   }): Promise<{ readonly data: { readonly data: string } }> {
     const identity = decodeMailId(options.messageId)
     if (identity.uidValidity !== this.uidValidity) throw new MailnaraIdentifierError()
-    const match = /^a1\.(\d+)$/.exec(options.id)
-    const index = match?.[1] ? Number(match[1]) : -1
-    const attachment = (await this.load(identity.uid)).parsed.attachments[index]
+    const part = decodeAttachmentId(options.id)
+    if (!part) throw new MailnaraIdentifierError()
+    const metadata = await this.loadMetadata(identity.uid)
+    const attachment = structureNodes(metadata.structure).find(node => node.part === part && attachmentNode(node))
     if (!attachment) throw new MailnaraIdentifierError()
+    const downloaded = await this.client.downloadMany(identity.uid.toString(), [part], { uid: true })
+    const content = downloaded[part]?.content
+    if (!content) throw new MailnaraIdentifierError()
     this.scheduleClose()
-    return { data: { data: Buffer.from(contentBytes(attachment.content)).toString('base64url') } }
+    return { data: { data: content.toString('base64url') } }
   }
 
   close(): void {
