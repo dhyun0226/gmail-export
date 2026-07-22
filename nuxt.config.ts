@@ -18,6 +18,13 @@ export default defineNuxtConfig({
   },
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  typescript: {
+    tsConfig: {
+      compilerOptions: {
+        allowImportingTsExtensions: true,
+      },
+    },
+  },
   modules: ['@nuxtjs/tailwindcss'],
   tailwindcss: {
     cssPath: '~/assets/css/main.css',
@@ -29,6 +36,12 @@ export default defineNuxtConfig({
     googleClientId: process.env.GOOGLE_CLIENT_ID || '',
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || '',
+    mailImapHost: process.env.MAIL_IMAP_HOST || '',
+    mailImapPort: process.env.MAIL_IMAP_PORT || '993',
+    mailImapSecure: process.env.MAIL_IMAP_SECURE || 'true',
+    mailImapUser: process.env.MAIL_IMAP_USER || '',
+    mailImapPassword: process.env.MAIL_IMAP_PASSWORD || '',
+    mailImapMailbox: process.env.MAIL_IMAP_MAILBOX || 'INBOX',
     aiProvider: process.env.AI_PROVIDER || 'gemini',
     geminiApiKey: process.env.GEMINI_API_KEY || '',
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
@@ -42,7 +55,8 @@ export default defineNuxtConfig({
   // --- [적용] 새로운 빌드 최적화 설정 ---
   nitro: {
     externals: {
-      inline: ['xlsx']
+      inline: ['xlsx'],
+      external: ['imapflow', 'postal-mime']
     },
     routeRules: {
       '/api/kpi/export-report': { maxBodySize: '10mb' },
