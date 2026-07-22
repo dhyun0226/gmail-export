@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
     console.log(`[KPI Process] Processing ${blNumbers.length} BL numbers for year ${year}`);
 
     // Gmail 클라이언트 가져오기
-    const gmail = await getGmailClient(accessToken);
+    const gmail = await getGmailClient(accessToken, undefined, event);
 
     // 날짜 범위 설정 (최근 1개월)
     const endDate = new Date();

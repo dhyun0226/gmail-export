@@ -23,7 +23,7 @@ export default defineEventHandler(async (event): Promise<FetchAttachmentsRespons
   }
 
   try {
-    const gmail = await getGmailClient(accessToken);
+    const gmail = await getGmailClient(accessToken, undefined, event);
     const emails = await fetchEmailsWithPdfAttachments(gmail, startDate, endDate);
     const totalAttachments = emails.reduce((sum, e) => sum + e.attachments.length, 0);
 

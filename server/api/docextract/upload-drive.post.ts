@@ -21,7 +21,7 @@ export default defineEventHandler(async (event): Promise<DriveUploadResponse> =>
   }
 
   try {
-    const gmail = await getGmailClient(accessToken);
+    const gmail = await getGmailClient(accessToken, undefined, event);
     const drive = await getDriveClient(accessToken);
 
     console.log(`[DocExtract] Uploading ${body.pdfReferences.length} PDFs to Drive`);

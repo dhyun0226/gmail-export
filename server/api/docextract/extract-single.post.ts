@@ -22,7 +22,7 @@ export default defineEventHandler(async (event): Promise<ExtractedDocumentData[]
   }
 
   try {
-    const gmail = await getGmailClient(accessToken);
+    const gmail = await getGmailClient(accessToken, undefined, event);
 
     // 1. Gmail에서 PDF 다운로드
     console.log(`[DocExtract] Downloading: ${body.filename}`);

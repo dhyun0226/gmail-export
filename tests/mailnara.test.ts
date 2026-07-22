@@ -1,12 +1,27 @@
 import assert from 'node:assert/strict'
+import { EventEmitter } from 'node:events'
 import { describe, it } from 'node:test'
 import {
+  closeMailClientAfterResponse,
   decodeMailId,
   encodeMailId,
   normalizeMailDate,
   parseGmailQuery,
   parseMailnaraConfig,
 } from '../server/utils/mailnara-core.ts'
+
+describe('closeMailClientAfterResponse', () => {
+  it('closes the IMAP connection when the HTTP response finishes', () => {
+    const response = new EventEmitter()
+    let closeCount = 0
+
+    closeMailClientAfterResponse(response, () => { closeCount += 1 })
+    response.emit('finish')
+    response.emit('close')
+
+    assert.equal(closeCount, 1)
+  })
+})
 
 describe('parseMailnaraConfig', () => {
   it('parses a valid private runtime configuration', () => {

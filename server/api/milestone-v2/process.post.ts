@@ -306,7 +306,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // 4. Gmail 클라이언트 생성 (refresh_token 같이 넘겨 자동 재발급 활성화)
-    const gmail = await getGmailClient(accessToken, refreshToken);
+    const gmail = await getGmailClient(accessToken, refreshToken, event);
 
     // 4-1. 토큰 유효성 사전 점검 — 만료/취소 시 명확한 401 노출 (이전엔 무한 빈값으로 빠짐)
     try {

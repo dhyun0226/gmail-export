@@ -1,5 +1,7 @@
 import { google } from 'googleapis';
+import type { H3Event } from 'h3';
 import { createMailnaraGmailClient } from './mailnara';
+import { closeMailClientAfterResponse } from './mailnara-core';
 
 export function getGoogleAuthClient() {
   const config = useRuntimeConfig();
@@ -26,10 +28,12 @@ export function getAuthUrl(client: any) {
 
 // refresh_token 까지 같이 넘기면 googleapis 가 access_token 만료 시 자동 재발급한다.
 // 없이 호출하면 기존 동작 유지 (1시간 만료 후 401).
-export async function getGmailClient(accessToken: string, refreshToken?: string) {
+export async function getGmailClient(accessToken: string, refreshToken: string | undefined, event: H3Event) {
   void accessToken;
   void refreshToken;
-  return createMailnaraGmailClient(useRuntimeConfig());
+  const client = await createMailnaraGmailClient(useRuntimeConfig());
+  closeMailClientAfterResponse(event.node.res, () => client.close());
+  return client;
 }
 
 export async function getDriveClient(accessToken: string, refreshToken?: string) {

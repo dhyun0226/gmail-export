@@ -133,7 +133,7 @@ export default defineEventHandler(async (event) => {
   }
   
   try {
-    const gmail = await getGmailClient(accessToken);
+    const gmail = await getGmailClient(accessToken, undefined, event);
     
     // Gmail 검색 쿼리 생성 (Unix 타임스탬프 사용)
     const startTimestamp = Math.floor(new Date(startDate).getTime() / 1000);

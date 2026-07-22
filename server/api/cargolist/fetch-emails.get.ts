@@ -12,7 +12,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const gmail = await getGmailClient(accessToken);
+    const gmail = await getGmailClient(accessToken, undefined, event);
     const queryParams = getQuery(event);
     const { startDate, endDate } = queryParams;
 

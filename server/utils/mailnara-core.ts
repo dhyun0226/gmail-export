@@ -25,6 +25,10 @@ export type MailIdentity = {
   readonly uid: number
 }
 
+type ResponseLifecycle = {
+  once(eventName: 'finish' | 'close', listener: () => void): unknown
+}
+
 const ConfigSchema = z.object({
   mailImapHost: z.string().trim().min(1),
   mailImapPort: z.coerce.number().int().min(1).max(65535),
@@ -126,4 +130,15 @@ export function normalizeMailDate(value: Date | string | undefined): Date | unde
   if (!value) return undefined
   const date = value instanceof Date ? value : new Date(value)
   return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+export function closeMailClientAfterResponse(response: ResponseLifecycle, close: () => void): void {
+  let closed = false
+  const closeOnce = () => {
+    if (closed) return
+    closed = true
+    close()
+  }
+  response.once('finish', closeOnce)
+  response.once('close', closeOnce)
 }

@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const gmail = await getGmailClient(accessToken);
+    const gmail = await getGmailClient(accessToken, undefined, event);
 
     // 쿼리 파라미터에서 날짜 범위 받기 (기본값: 6개월)
     const query_ = getQuery(event);
