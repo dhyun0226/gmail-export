@@ -8,7 +8,7 @@ import { getAllDHLMails } from './gmailService';
 export async function processBlNumbers(
   blNumbers: string[],
   blYear: string,
-  gmail: any,
+  gmail: any | null,
   options: {
     startDate: string;
     endDate: string;
@@ -23,7 +23,9 @@ export async function processBlNumbers(
     console.log('[KPI Processor] Fetching Gmail and Unipass data in parallel...');
     
     const [gmailDataMap, unipassDataMap] = await Promise.all([
-      getAllDHLMails(gmail, options.startDate, options.endDate),
+      gmail
+        ? getAllDHLMails(gmail, options.startDate, options.endDate)
+        : Promise.resolve(new Map()),
       fetchMultipleUnipassData(blNumbers, blYear)
     ]);
     

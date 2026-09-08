@@ -32,7 +32,14 @@ export default defineEventHandler(async (event) => {
     console.log(`[KPI Process] Processing ${blNumbers.length} BL numbers for year ${year}`);
 
     // Gmail 클라이언트 가져오기
-    const gmail = await getGmailClient(accessToken, undefined, event);
+    let gmail: Awaited<ReturnType<typeof getGmailClient>> | null = null;
+    let mailWarning: string | undefined;
+    try {
+      gmail = await getGmailClient(accessToken, undefined, event);
+    } catch (mailError) {
+      mailWarning = '메일 조회에 실패하여 DHL 메일 수신시간을 제외하고 처리했습니다.';
+      console.error('[KPI Process] Mail connection unavailable; continuing without mail data:', mailError);
+    }
 
     // 날짜 범위 설정 (최근 1개월)
     const endDate = new Date();
@@ -121,6 +128,7 @@ export default defineEventHandler(async (event) => {
       success: true,
       results: extendedResults,
       statistics,
+      ...(mailWarning ? { warning: mailWarning } : {}),
       progress: {
         total: blNumbers.length,
         processed: results.length,
