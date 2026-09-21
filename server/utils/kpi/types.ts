@@ -115,6 +115,7 @@ export interface ExportProcessRequest {
 
 // 수입 처리 요청 (확장)
 export interface ImportProcessRequest extends KpiProcessRequest {
+  mailTimeMap?: Record<string, string>;
   amatWeek?: string;
   amatMonth?: string;
   reasonMap?: Record<string, string>;  // BL번호 → K열 특이사항 텍스트

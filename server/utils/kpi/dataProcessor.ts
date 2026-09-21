@@ -1,6 +1,5 @@
 import type { KpiProcessResult } from './types';
 import { fetchMultipleUnipassData } from './unipassService';
-import { getAllDHLMails } from './gmailService';
 
 /**
  * BL 번호들을 처리하여 모든 시간 정보를 수집 (단순화)
@@ -8,11 +7,7 @@ import { getAllDHLMails } from './gmailService';
 export async function processBlNumbers(
   blNumbers: string[],
   blYear: string,
-  gmail: any | null,
-  options: {
-    startDate: string;
-    endDate: string;
-  }
+  mailTimeMap: Record<string, string> = {}
 ): Promise<{ results: KpiProcessResult[] }> {
   console.log(`[KPI Processor] Starting simple process for ${blNumbers.length} BL numbers`);
   
@@ -20,28 +15,22 @@ export async function processBlNumbers(
   
   try {
     // Gmail과 Unipass 데이터를 병렬로 처리 (단순화)
-    console.log('[KPI Processor] Fetching Gmail and Unipass data in parallel...');
+    console.log('[KPI Processor] Fetching Unipass data and merging the uploaded mail list...');
     
-    const [gmailDataMap, unipassDataMap] = await Promise.all([
-      gmail
-        ? getAllDHLMails(gmail, options.startDate, options.endDate)
-        : Promise.resolve(new Map()),
-      fetchMultipleUnipassData(blNumbers, blYear)
-    ]);
+    const unipassDataMap = await fetchMultipleUnipassData(blNumbers, blYear);
     
-    console.log('[KPI Processor] Data fetching completed - Gmail:', gmailDataMap?.size || 0, 'Unipass:', unipassDataMap?.size || 0);
+    console.log('[KPI Processor] Data fetching completed - uploaded mail:', Object.keys(mailTimeMap).length, 'Unipass:', unipassDataMap?.size || 0);
     
     // 결과 통합
-    console.log('[KPI Processor] Starting result merge, gmailDataMap size:', gmailDataMap?.size || 0);
+    console.log('[KPI Processor] Starting result merge, mailTimeMap size:', Object.keys(mailTimeMap).length);
     console.log('[KPI Processor] unipassDataMap size:', unipassDataMap?.size || 0);
     
     for (const blNumber of blNumbers) {
       const unipassData = unipassDataMap?.get(blNumber) || {};
-      const gmailData = gmailDataMap?.get(blNumber) || {};
       
       const result: KpiProcessResult = {
         blNumber,
-        mailReceiveTime: gmailData.mailReceiveTime,
+        mailReceiveTime: mailTimeMap[blNumber],
         lowerDeclAcceptTime: unipassData.lowerDeclAcceptTime,
         warehouseEntryTime: unipassData.warehouseEntryTime,
         importDeclTime: unipassData.importDeclTime,

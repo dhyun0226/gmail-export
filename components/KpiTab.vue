@@ -41,7 +41,7 @@
       </div>
 
       <!-- Horizontal Upload Row: 4 Files in a Row -->
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
         
         <!-- 1. Cumulative Report (누적본) - PURPLE -->
         <div class="card p-4 border-t-4 border-purple-500 flex flex-col h-full bg-white shadow-sm">
@@ -96,6 +96,21 @@
           </div>
           <div class="flex-1">
             <KpiExcelUploader mode="export" @uploaded="handleExportFileUploaded" />
+          </div>
+        </div>
+
+        <div class="card p-4 border-t-4 border-cyan-500 flex flex-col h-full bg-white shadow-sm">
+          <div class="mb-3 flex items-center justify-between">
+            <h3 class="text-sm font-bold text-cyan-700 flex items-center gap-2">
+              <span class="bg-cyan-100 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">5</span>
+              미분류 메일 목록
+            </h3>
+            <span v-if="Object.keys(mailTimeMap).length > 0" class="text-[10px] font-bold text-cyan-600">
+              {{ Object.keys(mailTimeMap).length }} BL
+            </span>
+          </div>
+          <div class="flex-1">
+            <KpiMailListUploader @uploaded="handleMailListUploaded" />
           </div>
         </div>
       </div>
@@ -179,6 +194,7 @@ import { ref, computed } from 'vue';
 import KpiExcelUploader from '~/components/kpi/KpiExcelUploader.vue';
 import KpiReasonUploader from '~/components/kpi/KpiReasonUploader.vue';
 import KpiBaseReportUploader from '~/components/kpi/KpiBaseReportUploader.vue';
+import KpiMailListUploader from '~/components/kpi/KpiMailListUploader.vue';
 import KpiProcessingStatus from '~/components/kpi/KpiProcessingStatus.vue';
 import KpiResultTable from '~/components/kpi/KpiResultTable.vue';
 import KpiExportResultTable from '~/components/kpi/KpiExportResultTable.vue';
@@ -198,6 +214,7 @@ const blNumbers = ref<string[]>([]);
 const uploadedFileName = ref('');
 const rawData = ref<any[]>([]);
 const reasonMap = ref<Record<string, string>>({});
+const mailTimeMap = ref<Record<string, string>>({});
 const importResults = ref<any[]>([]);
 
 const declNumbers = ref<string[]>([]);
@@ -221,7 +238,11 @@ const totalCount = ref(0);
 const currentPhase = ref<'gmail' | 'unipass' | 'complete'>('gmail');
 const downloadingReport = ref(false);
 
-const isReadyToProcess = computed(() => blNumbers.value.length > 0 || declNumbers.value.length > 0);
+const isReadyToProcess = computed(() => {
+  const hasWork = blNumbers.value.length > 0 || declNumbers.value.length > 0;
+  const importReady = blNumbers.value.length === 0 || Object.keys(mailTimeMap.value).length > 0;
+  return hasWork && importReady;
+});
 
 const formatTime = (seconds: number): string => {
   if (!seconds) return '0초';
@@ -247,6 +268,10 @@ const handleExportFileUploaded = (data: { declNumbers: string[], fileName: strin
 
 const handleReasonUploaded = (data: { reasonMap: Record<string, string> }) => {
   reasonMap.value = data.reasonMap;
+};
+
+const handleMailListUploaded = (data: { mailTimeMap: Record<string, string> }) => {
+  mailTimeMap.value = data.mailTimeMap;
 };
 
 const handleBaseReportUploaded = (data: { importData: any[], exportData: any[] }) => {
@@ -280,6 +305,7 @@ const startFullProcessing = async () => {
           amatWeek: amatWeek.value,
           amatMonth: amatMonth.value,
           reasonMap: reasonMap.value,
+          mailTimeMap: mailTimeMap.value,
         },
       });
       
