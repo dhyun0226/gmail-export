@@ -24,10 +24,10 @@
         />
       </div>
 
-      <div v-else class="flex items-center gap-4">
+      <div v-else class="flex items-start gap-3 min-w-0">
         <div class="text-3xl">📊</div>
         <div class="flex-1 min-w-0">
-          <h3 class="text-sm font-semibold text-gray-800 truncate">{{ file.name }}</h3>
+          <h3 class="text-sm font-semibold text-gray-800 break-all leading-5">{{ file.name }}</h3>
           <p class="text-xs text-gray-500">{{ formatFileSize(file.size) }}</p>
         </div>
         <button @click="removeFile" class="btn btn-ghost btn-sm">

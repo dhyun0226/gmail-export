@@ -7,9 +7,9 @@
         <input ref="fileInput" type="file" accept=".xlsx,.xls"
           class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" @change="handleFileSelect" />
       </div>
-      <div v-else class="flex items-center gap-3">
+      <div v-else class="flex items-start gap-3 min-w-0">
         <div class="flex-1 min-w-0">
-          <h3 class="text-sm font-semibold text-gray-800 truncate">{{ file.name }}</h3>
+          <h3 class="text-sm font-semibold text-gray-800 break-all leading-5">{{ file.name }}</h3>
           <p class="text-xs text-gray-500">{{ matchedCount }}개 BL 추출</p>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" @click="removeFile">삭제</button>

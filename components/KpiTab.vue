@@ -40,8 +40,8 @@
         </div>
       </div>
 
-      <!-- Horizontal Upload Row: 4 Files in a Row -->
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+      <!-- Keep upload cards wide enough for long Korean file names. -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         
         <!-- 1. Cumulative Report (누적본) - PURPLE -->
         <div class="card p-4 border-t-4 border-purple-500 flex flex-col h-full bg-white shadow-sm">
