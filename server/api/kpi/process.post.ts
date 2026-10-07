@@ -17,7 +17,6 @@ export default defineEventHandler(async (event) => {
     const extendedResults: ImportKpiProcessResultExtended[] = results.map((result) => {
       const remarkText = reasonMap?.[result.blNumber] || ''
       const matchedDelay = matchDelayReason(remarkText, result)
-      const delayMatch = applyMailDelayReason(matchedDelay, Boolean(result.mailReceiveTime))
 
       let diffTime: number | null = null
       if (result.importAcceptTime && result.lowerDeclAcceptTime) {
@@ -27,6 +26,7 @@ export default defineEventHandler(async (event) => {
           diffTime = Math.round((((end.getTime() - start.getTime()) / 86400000) - 0.2) * 100) / 100
         }
       }
+      const delayMatch = applyMailDelayReason(matchedDelay, Boolean(result.mailReceiveTime), diffTime)
       let gross = ''
       if (diffTime !== null) gross = diffTime > 0 ? 'N' : 'Y'
       let net = gross

@@ -43,7 +43,10 @@ export function buildMailTimeMap(rows: readonly MailListRow[]): MailTimeMap {
 export function applyMailDelayReason(
   existing: DelayReason | null,
   hasMatchedMail: boolean,
+  diffTime: number | null,
 ): DelayReason | null {
+  // On-time shipments (Gross/Net = Y/Y) must have blank reason columns.
+  if (diffTime !== null && diffTime <= 0) return null
   if (!hasMatchedMail) return existing
   if (existing && existing.reason !== "Out of broker's office hours") return existing
   return { reason: 'Pre-alert missing by carriers', controllable: 'Uncontrollable' }

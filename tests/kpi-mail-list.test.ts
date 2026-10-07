@@ -23,11 +23,35 @@ describe('KPI unclassified mail list', () => {
 
   it('only replaces blank or out-of-office delay reasons', () => {
     const preAlert = { reason: 'Pre-alert missing by carriers', controllable: 'Uncontrollable' }
-    assert.deepEqual(applyMailDelayReason(null, true), preAlert)
-    assert.deepEqual(applyMailDelayReason({ reason: "Out of broker's office hours", controllable: 'Uncontrollable' }, true), preAlert)
+    assert.deepEqual(applyMailDelayReason(null, true, 0.01), preAlert)
+    assert.deepEqual(applyMailDelayReason({ reason: "Out of broker's office hours", controllable: 'Uncontrollable' }, true, 0.01), preAlert)
     assert.deepEqual(
-      applyMailDelayReason({ reason: 'Existing reason', controllable: 'Controllable' }, true),
+      applyMailDelayReason({ reason: 'Existing reason', controllable: 'Controllable' }, true, 0.01),
       { reason: 'Existing reason', controllable: 'Controllable' },
     )
+  })
+
+  it('leaves reason columns blank for on-time shipments even with matched mail', () => {
+    for (const diffTime of [-0.01, 0]) {
+      for (const hasMatchedMail of [false, true]) {
+        assert.equal(applyMailDelayReason(null, hasMatchedMail, diffTime), null)
+        assert.equal(applyMailDelayReason({
+          reason: 'Pre-alert missing by carriers', controllable: 'Uncontrollable',
+        }, hasMatchedMail, diffTime), null)
+      }
+    }
+  })
+
+  it('preserves delayed shipments without matched mail', () => {
+    const existing = { reason: 'Existing reason', controllable: 'Controllable' }
+    assert.equal(applyMailDelayReason(existing, false, 0.01), existing)
+    assert.equal(applyMailDelayReason(null, false, 0.01), null)
+  })
+
+  it('preserves existing handling when diff time cannot be calculated', () => {
+    assert.deepEqual(applyMailDelayReason(null, true, null), {
+      reason: 'Pre-alert missing by carriers', controllable: 'Uncontrollable',
+    })
+    assert.equal(applyMailDelayReason(null, false, null), null)
   })
 })
