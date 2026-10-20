@@ -3,7 +3,7 @@
     @drop.prevent="handleDrop"
     @dragover.prevent="isDragging = true"
     @dragleave.prevent="isDragging = false"
-    class="relative border-2 border-dashed rounded-xl p-6 transition-all duration-200 text-center"
+    class="upload-zone relative border-2 border-dashed rounded-xl p-6 transition-all duration-200 text-center"
     :class="[
       isDragging ? 'border-primary-DEFAULT bg-primary-50' : 'border-gray-200 bg-gray-50',
       uploadedFile ? 'border-green-400 bg-green-50' : ''

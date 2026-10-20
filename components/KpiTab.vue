@@ -2,49 +2,74 @@
   <div>
     <!-- Step 1: Settings & All File Uploads (Compact Horizontal Layout) -->
     <div class="mb-8">
-      <h2 class="section-title mb-6">KPI 통합 처리 (4개 파일 일괄 업로드)</h2>
+      <div class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div class="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-bold tracking-wide text-white">KPI WORKSPACE</div>
+          <h2 class="text-2xl font-extrabold tracking-tight text-slate-900">KPI 통합 처리</h2>
+          <p class="mt-1 text-sm text-slate-500">기본 정보를 입력한 뒤 필요한 파일을 순서대로 등록해 주세요.</p>
+        </div>
+        <div class="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-500 shadow-sm">
+          <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+          총 5단계 파일 등록
+        </div>
+      </div>
 
       <!-- Common Settings (Slim Version) -->
-      <div class="card card-body mb-6 bg-gray-50/50 border-none shadow-sm">
-        <div class="flex flex-wrap items-center gap-x-10 gap-y-4">
-          <div class="flex items-center gap-3">
-            <label class="text-sm font-bold text-gray-600">AMAT WK</label>
+      <div class="mb-7 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="mb-4 flex items-center gap-3">
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-sm font-bold text-white">01</span>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">기본 정보</h3>
+            <p class="text-xs text-slate-500">생성할 KPI 리포트의 기준 정보를 입력합니다.</p>
+          </div>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-3">
+          <div class="setting-field">
+            <label class="setting-label">AMAT WK</label>
             <input
               v-model="amatWeek"
               type="text"
               placeholder="FY202427"
-              class="form-input w-[140px] bg-white"
+              class="form-input w-full bg-white"
               :disabled="processing"
             />
           </div>
-          <div class="flex items-center gap-3">
-            <label class="text-sm font-bold text-gray-600">AMAT MONTH</label>
+          <div class="setting-field">
+            <label class="setting-label">AMAT MONTH</label>
             <input
               v-model="amatMonth"
               type="text"
               placeholder="FY24 Q3M1"
-              class="form-input w-[140px] bg-white"
+              class="form-input w-full bg-white"
               :disabled="processing"
             />
           </div>
-          <div class="flex items-center gap-3">
-            <label class="text-sm font-bold text-gray-600">BL 년도</label>
+          <div class="setting-field">
+            <label class="setting-label">BL 년도</label>
             <input
               v-model="blYear"
               type="number"
               placeholder="2026"
-              class="form-input w-[100px] bg-white"
+              class="form-input w-full bg-white"
               :disabled="processing"
             />
           </div>
         </div>
       </div>
 
-      <!-- Keep upload cards wide enough for long Korean file names. -->
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      <div class="mb-4 flex items-center gap-3">
+        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900 text-sm font-bold text-white">02</span>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900">파일 등록</h3>
+          <p class="text-xs text-slate-500">단계 번호에 맞춰 엑셀 파일을 등록합니다.</p>
+        </div>
+      </div>
+
+      <!-- Six columns allow the final two cards to sit centered below the first three. -->
+      <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-6">
         
         <!-- 1. Cumulative Report (누적본) - PURPLE -->
-        <div class="card p-4 border-t-4 border-purple-500 flex flex-col h-full bg-white shadow-sm">
+        <div class="upload-card upload-card-purple xl:col-span-2">
           <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-bold text-purple-700 flex items-center gap-2">
               <span class="bg-purple-100 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">1</span>
@@ -58,7 +83,7 @@
         </div>
 
         <!-- 2. Import Source (impo) - BLUE -->
-        <div class="card p-4 border-t-4 border-blue-500 flex flex-col h-full bg-white shadow-sm">
+        <div class="upload-card upload-card-blue xl:col-span-2">
           <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-bold text-blue-700 flex items-center gap-2">
               <span class="bg-blue-100 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">2</span>
@@ -72,7 +97,7 @@
         </div>
 
         <!-- 3. Reasons (사유) - AMBER -->
-        <div class="card p-4 border-t-4 border-amber-500 flex flex-col h-full bg-white shadow-sm">
+        <div class="upload-card upload-card-amber xl:col-span-2">
           <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-bold text-amber-700 flex items-center gap-2">
               <span class="bg-amber-100 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">3</span>
@@ -86,7 +111,7 @@
         </div>
 
         <!-- 4. Export Source (expo) - EMERALD -->
-        <div class="card p-4 border-t-4 border-emerald-500 flex flex-col h-full bg-white shadow-sm">
+        <div class="upload-card upload-card-emerald xl:col-span-2 xl:col-start-2">
           <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-bold text-emerald-700 flex items-center gap-2">
               <span class="bg-emerald-100 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">4</span>
@@ -99,7 +124,7 @@
           </div>
         </div>
 
-        <div class="card p-4 border-t-4 border-cyan-500 flex flex-col h-full bg-white shadow-sm">
+        <div class="upload-card upload-card-cyan xl:col-span-2">
           <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-bold text-cyan-700 flex items-center gap-2">
               <span class="bg-cyan-100 w-5 h-5 rounded-full flex items-center justify-center text-[10px]">5</span>
@@ -116,11 +141,11 @@
       </div>
 
       <!-- 통합 시작 버튼 (Full Width) -->
-      <div class="mt-8">
+      <div class="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
         <button
           @click="startFullProcessing"
           :disabled="!isReadyToProcess || processing"
-          class="btn btn-primary btn-lg w-full py-4 text-lg shadow-lg flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+          class="btn btn-primary btn-lg flex w-full items-center justify-center gap-3 rounded-xl py-4 text-base font-bold shadow-lg shadow-slate-300/50 transition-all active:scale-[0.99]"
         >
           <span v-if="processing" class="animate-spin text-xl">🔄</span>
           <span>{{ processing ? `통합 처리 중... (${formatTime(processingTime)})` : 'KPI 통합 추출 시작' }}</span>
@@ -486,9 +511,30 @@ const downloadKpiReport = async () => {
 
 <style scoped>
 .form-input {
-  @apply px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-primary transition-all text-sm;
+  @apply border border-slate-200 px-3 py-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all text-sm font-semibold text-slate-800;
 }
 .card {
   @apply rounded-xl border border-gray-100;
+}
+.setting-field {
+  @apply rounded-xl border border-slate-100 bg-slate-50/80 p-3;
+}
+.setting-label {
+  @apply mb-2 block text-[11px] font-extrabold tracking-wide text-slate-500;
+}
+.upload-card {
+  @apply relative flex min-h-[290px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg;
+}
+.upload-card::before {
+  content: '';
+  @apply absolute inset-x-0 top-0 h-1;
+}
+.upload-card-purple::before { @apply bg-purple-500; }
+.upload-card-blue::before { @apply bg-blue-500; }
+.upload-card-amber::before { @apply bg-amber-500; }
+.upload-card-emerald::before { @apply bg-emerald-500; }
+.upload-card-cyan::before { @apply bg-cyan-500; }
+:deep(.upload-zone) {
+  @apply flex min-h-[190px] items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/70 px-5 py-6 transition-colors hover:border-slate-300 hover:bg-slate-50;
 }
 </style>
