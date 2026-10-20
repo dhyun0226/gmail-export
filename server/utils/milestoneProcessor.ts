@@ -228,6 +228,8 @@ export async function fetchUnipassData(blNumber: string, blYear: string, apiKey:
   return { ...empty, unipassFailed: true };
 }
 
+export type ReFetchTag = '' | 'SC,CT' | 'CT';
+
 export interface ParsedShipment {
   id: string;
   blNumber: string;
@@ -239,6 +241,48 @@ export interface ParsedShipment {
   emailDateTimeDisplay: string;
   rawSortKey?: string;
   isUps: boolean;
+  reFetchTag?: ReFetchTag;
+  acceptanceDate?: string;
+  acceptanceTime?: string;
+  acceptanceTimeDisplay?: string;
+  clearanceDate?: string;
+  clearanceTime?: string;
+  clearanceTimeDisplay?: string;
+  unipassFailed?: boolean;
+}
+
+/**
+ * 오늘 조회 결과 기준, 여전히 누락된 마일스톤 태그 계산
+ * @returns null이면 완료 (누락 없음), 'SC,CT' 또는 'CT' 반환
+ */
+export function calculateNextMissingTag(item: {
+  reFetchTag?: ReFetchTag;
+  acceptanceDate?: string;
+  acceptanceTime?: string;
+  clearanceDate?: string;
+  clearanceTime?: string;
+}): ReFetchTag | null {
+  const prevTag = item.reFetchTag || '';
+  const neededSc = prevTag === '' || prevTag === 'SC,CT';
+  const neededCt = prevTag === '' || prevTag === 'SC,CT' || prevTag === 'CT';
+
+  const gotSc = !!(item.acceptanceDate && item.acceptanceTime);
+  const gotCt = !!(item.clearanceDate && item.clearanceTime);
+
+  const stillMissingSc = neededSc && !gotSc;
+  const stillMissingCt = neededCt && !gotCt;
+
+  if (!stillMissingSc && !stillMissingCt) {
+    return null; // 둘 다 충족됨 -> 완료
+  }
+
+  if (stillMissingSc) {
+    return 'SC,CT';
+  }
+  if (stillMissingCt) {
+    return 'CT';
+  }
+  return null;
 }
 
 /**
@@ -265,8 +309,6 @@ export function parseMailListWorkbook(wb: XLSX.WorkBook, hasUpsFile: boolean): P
   const rawRows: any[][] = XLSX.utils.sheet_to_json(targetSheet, { header: 1, defval: '' });
   if (rawRows.length <= 1) return [];
 
-  // 헤더 분석 (0행)
-  // [ '수신일시', '메일제목', '발신자', '확인' ] 형태 또는 컬럼 인덱스 기반
   let dateCol = 0;
   let titleCol = 1;
   let senderCol = 2;
@@ -316,7 +358,8 @@ export function parseMailListWorkbook(wb: XLSX.WorkBook, hasUpsFile: boolean): P
       emailTime: parsedDate.time,
       emailDateTimeDisplay: parsedDate.display,
       rawSortKey: parsedDate.rawSortKey,
-      isUps: false
+      isUps: false,
+      reFetchTag: ''
     };
 
     if (!blMap.has(blNumber)) {
@@ -343,7 +386,6 @@ export function parseUpsWorkbook(wb: XLSX.WorkBook): ParsedShipment[] {
   const ws = wb.Sheets[sheetName];
   if (!ws) return [];
 
-  // rawRows: B열(idx 1), C열(idx 2), G열(idx 6)
   const rawRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
   if (rawRows.length <= 1) return [];
 
@@ -370,9 +412,90 @@ export function parseUpsWorkbook(wb: XLSX.WorkBook): ParsedShipment[] {
       emailTime: parsedDate.time,
       emailDateTimeDisplay: parsedDate.display,
       rawSortKey: parsedDate.rawSortKey,
-      isUps: true
+      isUps: true,
+      reFetchTag: ''
     });
   }
 
   return upsList;
+}
+
+/**
+ * 전일 누락건 엑셀 파일 파싱 (재조회 대상 BL)
+ * 헤더: [B/L 번호, 누락항목, Tracking 번호, 메일 수신일시, 구분, 제목]
+ */
+export function parseMissingWorkbook(wb: XLSX.WorkBook): ParsedShipment[] {
+  let targetSheet: XLSX.WorkSheet | null = null;
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    if (ws && ws['!ref']) {
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (rows.length > 1) {
+        targetSheet = ws;
+        break;
+      }
+    }
+  }
+
+  if (!targetSheet) return [];
+
+  const rawRows: any[][] = XLSX.utils.sheet_to_json(targetSheet, { header: 1, defval: '' });
+  if (rawRows.length <= 1) return [];
+
+  const header = rawRows[0].map((c) => String(c).trim());
+  let blCol = 0;
+  let tagCol = 1;
+  let trackCol = 2;
+  let dateCol = 3;
+  let titleCol = 5;
+
+  const hBlIdx = header.findIndex((h) => h.includes('BL') || h.includes('B/L'));
+  const hTagIdx = header.findIndex((h) => h.includes('누락') || h.includes('항목') || h.includes('태그'));
+  const hTrackIdx = header.findIndex((h) => h.includes('Tracking') || h.includes('트래킹'));
+  const hDateIdx = header.findIndex((h) => h.includes('수신') || h.includes('날짜') || h.includes('일시'));
+  const hTitleIdx = header.findIndex((h) => h.includes('제목') || h.includes('화물'));
+
+  if (hBlIdx !== -1) blCol = hBlIdx;
+  if (hTagIdx !== -1) tagCol = hTagIdx;
+  if (hTrackIdx !== -1) trackCol = hTrackIdx;
+  if (hDateIdx !== -1) dateCol = hDateIdx;
+  if (hTitleIdx !== -1) titleCol = hTitleIdx;
+
+  const missingList: ParsedShipment[] = [];
+
+  for (let i = 1; i < rawRows.length; i++) {
+    const row = rawRows[i];
+    const rawBl = String(row[blCol] || '').trim();
+    const blNumber = cleanBlNumber(rawBl);
+    if (!blNumber) continue;
+
+    const rawTag = String(row[tagCol] || '').toUpperCase();
+    let reFetchTag: ReFetchTag = 'SC,CT';
+    if (rawTag.includes('CT') && !rawTag.includes('SC')) {
+      reFetchTag = 'CT';
+    } else if (rawTag.includes('수리') && !rawTag.includes('신고')) {
+      reFetchTag = 'CT';
+    }
+
+    const trackingNumber = String(row[trackCol] || '').trim();
+    const rawDate = row[dateCol];
+    const parsedDate = parseMailDate(rawDate);
+    const subject = String(row[titleCol] || `[전일누락 재조회] ${blNumber}`).trim();
+
+    missingList.push({
+      id: `missing-${blNumber}`,
+      blNumber,
+      trackingNumber,
+      subject,
+      sender: 'RE-FETCH',
+      emailDate: parsedDate.date,
+      emailTime: parsedDate.time,
+      emailDateTimeDisplay: parsedDate.display,
+      rawSortKey: parsedDate.rawSortKey,
+      isUps: !!trackingNumber,
+      reFetchTag
+    });
+  }
+
+  return missingList;
 }

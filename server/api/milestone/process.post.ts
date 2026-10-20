@@ -3,7 +3,9 @@ import * as XLSX from 'xlsx/xlsx.mjs';
 import {
   parseMailListWorkbook,
   parseUpsWorkbook,
+  parseMissingWorkbook,
   fetchUnipassData,
+  calculateNextMissingTag,
   ParsedShipment
 } from '../../utils/milestoneProcessor';
 
@@ -21,23 +23,28 @@ export default defineEventHandler(async (event) => {
 
     const mailFilePart = parts.find((p) => p.name === 'mailFile' && p.data && p.data.length > 0);
     const upsFilePart = parts.find((p) => p.name === 'upsFile' && p.data && p.data.length > 0);
+    const missingFilePart = parts.find((p) => p.name === 'missingFile' && p.data && p.data.length > 0);
     const blYearPart = parts.find((p) => p.name === 'blYear');
     const blYear = blYearPart?.data?.toString().trim() || new Date().getFullYear().toString();
 
-    if (!mailFilePart) {
+    // 메일목록 파일 또는 누락건 파일 중 적어도 하나는 필요
+    if (!mailFilePart && !missingFilePart) {
       throw createError({
         statusCode: 400,
-        statusMessage: '메일 목록 파일이 필요합니다.'
+        statusMessage: '메일 목록 파일 또는 전일 누락건 파일이 필요합니다.'
       });
     }
 
-    console.log(`[Milestone] Mail file: ${mailFilePart.filename}, UPS file: ${upsFilePart?.filename || 'None'}, Year: ${blYear}`);
+    console.log(`[Milestone] Mail file: ${mailFilePart?.filename || 'None'}, UPS file: ${upsFilePart?.filename || 'None'}, Missing file: ${missingFilePart?.filename || 'None'}, Year: ${blYear}`);
 
     // 1. 메일 목록 파일 파싱
-    const mailWb = XLSX.read(mailFilePart.data, { type: 'buffer', codepage: 65001, cellDates: false });
-    const hasUpsFile = !!upsFilePart;
-    const mailShipments = parseMailListWorkbook(mailWb, hasUpsFile);
-    console.log(`[Milestone] Extracted ${mailShipments.length} unique shipments from mail file`);
+    let mailShipments: ParsedShipment[] = [];
+    if (mailFilePart) {
+      const mailWb = XLSX.read(mailFilePart.data, { type: 'buffer', codepage: 65001, cellDates: false });
+      const hasUpsFile = !!upsFilePart;
+      mailShipments = parseMailListWorkbook(mailWb, hasUpsFile);
+      console.log(`[Milestone] Extracted ${mailShipments.length} unique shipments from mail file`);
+    }
 
     // 2. UPS 파일 파싱 (업로드된 경우)
     let upsShipments: ParsedShipment[] = [];
@@ -47,8 +54,21 @@ export default defineEventHandler(async (event) => {
       console.log(`[Milestone] Extracted ${upsShipments.length} shipments from UPS file`);
     }
 
-    // 3. 두 데이터 병합 (동일 BL이 메일목록과 UPS 둘 다 있으면 UPS 정보를 우선 적용)
+    // 3. 전일 누락건 파일 파싱 (업로드된 경우)
+    let missingShipments: ParsedShipment[] = [];
+    if (missingFilePart) {
+      const missingWb = XLSX.read(missingFilePart.data, { type: 'buffer', codepage: 65001, cellDates: false });
+      missingShipments = parseMissingWorkbook(missingWb);
+      console.log(`[Milestone] Extracted ${missingShipments.length} shipments from missing file`);
+    }
+
+    // 4. 세 데이터 병합
+    // 전일 누락건을 먼저 넣고, 그 위에 메일목록과 UPS를 덮어씀 (신규 메일이 우선)
     const combinedMap = new Map<string, ParsedShipment>();
+
+    for (const item of missingShipments) {
+      combinedMap.set(item.blNumber, item);
+    }
 
     for (const item of mailShipments) {
       combinedMap.set(item.blNumber, item);
@@ -69,7 +89,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // 4. 유니패스 API 조회
+    // 5. 유니패스 API 조회
     const config = useRuntimeConfig();
     const apiKey = config.unipassApiKey || process.env.UNIPASS_API_KEY || '';
 
@@ -77,7 +97,6 @@ export default defineEventHandler(async (event) => {
       console.warn('[Milestone] Warning: UNIPASS_API_KEY is missing');
     }
 
-    // Unipass 병렬 조회 (동시 처리 5개씩)
     const results = [];
     const concurrency = 5;
 
@@ -99,32 +118,43 @@ export default defineEventHandler(async (event) => {
             unipass = await fetchUnipassData(shipment.blNumber, blYear, apiKey);
           }
 
-          return {
+          const combined = {
             ...shipment,
             ...unipass
+          };
+
+          // 차기 누락 태그 계산
+          const nextTag = calculateNextMissingTag(combined);
+
+          return {
+            ...combined,
+            nextMissingTag: nextTag // null: 완료, 'SC,CT': 신고/수리 누락, 'CT': 수리 누락
           };
         })
       );
 
       results.push(...chunkResults);
 
-      // 과도한 동시 호출 방지 딜레이
       if (i + concurrency < allShipments.length) {
         await new Promise((r) => setTimeout(r, 150));
       }
     }
 
     const unipassFailures = results.filter((r) => r.unipassFailed).map((r) => r.blNumber);
-    console.log(`[Milestone] Processing complete. Total: ${results.length}, Unipass failures: ${unipassFailures.length}`);
+    const missingCount = results.filter((r) => r.nextMissingTag !== null).length;
+
+    console.log(`[Milestone] Processing complete. Total: ${results.length}, Still missing: ${missingCount}, Unipass failures: ${unipassFailures.length}`);
 
     return {
       success: true,
-      message: `총 ${results.length}건의 마일스톤 데이터 처리가 완료되었습니다.` +
-        (unipassFailures.length > 0 ? ` (유니패스 조회 실패: ${unipassFailures.length}건)` : ''),
+      message: `총 ${results.length}건 처리 완료 (완료: ${results.length - missingCount}건, 누락/재조회대상: ${missingCount}건)` +
+        (unipassFailures.length > 0 ? ` [유니패스 실패: ${unipassFailures.length}건]` : ''),
       results,
       totalCount: results.length,
       mailCount: mailShipments.length,
       upsCount: upsShipments.length,
+      missingInputCount: missingShipments.length,
+      missingCount,
       unipassFailures
     };
   } catch (error: any) {

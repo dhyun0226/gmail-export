@@ -49,8 +49,17 @@ export default defineEventHandler(async (event) => {
         sortKey: hawbValue
       };
 
+      // 재조회 태그에 따른 마일스톤 생성 여부 결정 (중복 방지)
+      // '' (신규 건): DR, SC, CT 모두 출력
+      // 'SC,CT' (전일 신고/수리 누락 건): DR은 어제 전송 완료되었으므로 SC와 CT만 출력
+      // 'CT' (전일 수리만 누락 건): DR, SC는 이미 전송 완료되었으므로 CT만 출력
+      const tag = item.reFetchTag || '';
+      const emitDR = tag === '';
+      const emitSC = tag === '' || tag === 'SC,CT';
+      const emitCT = tag === '' || tag === 'SC,CT' || tag === 'CT';
+
       // 1) All Docs Received (메일 수신시간)
-      if (item.emailDate && item.emailTime) {
+      if (emitDR && item.emailDate && item.emailTime) {
         allDocsReceived.push({
           ...common,
           milestone: 'All Docs Received',
@@ -60,7 +69,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // 2) Submitted to Customs (통관접수시간)
-      if (item.acceptanceDate && item.acceptanceTime) {
+      if (emitSC && item.acceptanceDate && item.acceptanceTime) {
         submittedToCustoms.push({
           ...common,
           milestone: 'Submitted to Customs',
@@ -70,7 +79,7 @@ export default defineEventHandler(async (event) => {
       }
 
       // 3) Destination Custom Clearance (수리시간)
-      if (item.clearanceDate && item.clearanceTime) {
+      if (emitCT && item.clearanceDate && item.clearanceTime) {
         destinationCustomClearance.push({
           ...common,
           milestone: 'Destination Custom Clearance',
@@ -130,14 +139,15 @@ export default defineEventHandler(async (event) => {
   const worksheet = workbook.addWorksheet('마일스톤 결과');
 
   worksheet.columns = [
-    { header: '구분', key: 'type', width: 12 },
-    { header: '제목 / 화물명', key: 'subject', width: 45 },
+    { header: '구분', key: 'type', width: 14 },
     { header: 'B/L 번호', key: 'blNumber', width: 20 },
     { header: 'Tracking 번호', key: 'trackingNumber', width: 24 },
-    { header: '메일 수신일시', key: 'emailDateTime', width: 18 },
-    { header: '통관접수일시', key: 'acceptanceDateTime', width: 18 },
-    { header: '수리일시', key: 'clearanceDateTime', width: 18 },
-    { header: '유니패스 상태', key: 'status', width: 15 }
+    { header: '메일 수신일시 (DR)', key: 'emailDateTime', width: 18 },
+    { header: '통관접수일시 (SC)', key: 'acceptanceDateTime', width: 18 },
+    { header: '수리일시 (CT)', key: 'clearanceDateTime', width: 18 },
+    { header: '유니패스 상태', key: 'status', width: 15 },
+    { header: '재조회 여부', key: 'reFetchStatus', width: 15 },
+    { header: '제목 / 화물명', key: 'subject', width: 45 }
   ];
 
   worksheet.getRow(1).font = { bold: true };
@@ -153,15 +163,24 @@ export default defineEventHandler(async (event) => {
       ? '조회 실패'
       : (isCompleted ? '완료' : (item.acceptanceDate ? '수입신고진행' : '미통관'));
 
+    const reFetchStatusText = item.nextMissingTag
+      ? `누락 (${item.nextMissingTag})`
+      : '완료';
+
+    const typeText = item.reFetchTag
+      ? `전일누락(${item.reFetchTag})`
+      : (item.isUps ? 'UPS' : '일반');
+
     worksheet.addRow({
-      type: item.isUps ? 'UPS' : '일반',
-      subject: item.subject,
+      type: typeText,
       blNumber: item.blNumber,
       trackingNumber: item.trackingNumber || '-',
-      emailDateTime: item.emailDateTimeDisplay || `${item.emailDate} ${item.emailTime}`,
+      emailDateTime: item.emailDateTimeDisplay || (item.emailDate ? `${item.emailDate} ${item.emailTime}` : '-'),
       acceptanceDateTime: item.acceptanceTimeDisplay || (item.acceptanceDate ? `${item.acceptanceDate} ${item.acceptanceTime}` : '-'),
       clearanceDateTime: item.clearanceTimeDisplay || (item.clearanceDate ? `${item.clearanceDate} ${item.clearanceTime}` : '-'),
-      status: statusText
+      status: statusText,
+      reFetchStatus: reFetchStatusText,
+      subject: item.subject
     });
   }
 
