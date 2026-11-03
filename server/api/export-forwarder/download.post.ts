@@ -79,6 +79,15 @@ export default defineEventHandler(async (event) => {
   totalRow.getCell('diff').alignment = { vertical: 'middle', horizontal: 'right' };
   totalRow.getCell('status').alignment = { vertical: 'middle', horizontal: 'center' };
 
+  // 중복 인보이스 안내 (인보이스 기준 집계)
+  if (Array.isArray(data.duplicateInvoices) && data.duplicateInvoices.length > 0) {
+    ws1.addRow([]);
+    ws1.addRow([`※ 수출데이터 건수는 인보이스 기준 (신고번호 여러 개인 인보이스 ${data.duplicateInvoices.length}건은 1건으로 집계)`]).font = { bold: true, color: { argb: 'FFB45309' } };
+    for (const d of data.duplicateInvoices) {
+      ws1.addRow([`${d.invNo} (${d.forwarder}) - 신고번호 ${d.count}건: ${d.dclNos.join(', ')}`]);
+    }
+  }
+
   applyBorders(ws1);
 
   // ==========================================

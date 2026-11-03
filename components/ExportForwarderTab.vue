@@ -328,6 +328,19 @@
             </tfoot>
           </table>
         </div>
+        <div
+          v-if="result.duplicateInvoices && result.duplicateInvoices.length"
+          class="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
+        >
+          <p class="font-semibold mb-1">
+            ※ 수출데이터 건수는 인보이스 기준입니다. 한 인보이스에 신고번호가 여러 개인 {{ result.duplicateInvoices.length }}건은 1건으로 집계했습니다.
+          </p>
+          <ul class="list-disc pl-5 space-y-0.5">
+            <li v-for="d in result.duplicateInvoices" :key="d.forwarder + d.invNo" class="font-mono">
+              {{ d.invNo }} ({{ d.forwarder }}) — 신고번호 {{ d.count }}건: {{ d.dclNos.join(', ') }}
+            </li>
+          </ul>
+        </div>
       </div>
 
       <!-- ======================================================== -->

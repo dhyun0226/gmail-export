@@ -60,6 +60,15 @@ export interface ForwarderVerificationResult {
     contractErrorCount: number;
   };
   matchedInvoicesCount: number;
+  /** 수출데이터에서 동일 인보이스가 여러 신고번호로 등록된 건 (개수 검증 시 1건으로 집계) */
+  duplicateInvoices: DuplicateInvoice[];
+}
+
+export interface DuplicateInvoice {
+  invNo: string;
+  forwarder: string;
+  dclNos: string[];
+  count: number;
 }
 
 /**
@@ -229,11 +238,29 @@ export function verifyExportForwarders(
   dailyCounts: Record<string, number>,
   dailySheetNames: string[]
 ): ForwarderVerificationResult {
-  // (1) 1번 수출데이터 포워더별 건수 집계
+  // (1) 1번 수출데이터 포워더별 건수 집계 (인보이스 기준: 동일 인보이스는 1건으로 집계)
   const exportCounts: Record<string, number> = {};
+  const invGroups = new Map<string, { forwarder: string; dclNos: string[] }>();
   for (const item of exportList) {
-    if (item.forwarder) {
-      exportCounts[item.forwarder] = (exportCounts[item.forwarder] || 0) + 1;
+    if (!item.forwarder) continue;
+    const key = item.invNo ? `${item.forwarder}|${item.invNo}` : `${item.forwarder}|#row${item.row}`;
+    const g = invGroups.get(key);
+    if (g) {
+      g.dclNos.push(item.dclNo);
+      continue;
+    }
+    invGroups.set(key, { forwarder: item.forwarder, dclNos: [item.dclNo] });
+    exportCounts[item.forwarder] = (exportCounts[item.forwarder] || 0) + 1;
+  }
+  const duplicateInvoices: DuplicateInvoice[] = [];
+  for (const [key, g] of invGroups.entries()) {
+    if (g.dclNos.length > 1) {
+      duplicateInvoices.push({
+        invNo: key.split('|')[1],
+        forwarder: g.forwarder,
+        dclNos: g.dclNos,
+        count: g.dclNos.length
+      });
     }
   }
 
@@ -279,8 +306,12 @@ export function verifyExportForwarders(
   const matchedInvoices = new Set<string>();
 
   // 1) 수출데이터 기준으로 DAILY 대조
+  const seenExportInv = new Set<string>();
   for (const item of exportList) {
     if (!item.invNo) continue;
+    // 동일 인보이스(분할신고 등)는 1회만 대조
+    if (seenExportInv.has(item.invNo)) continue;
+    seenExportInv.add(item.invNo);
 
     const dailyItem = dailyMap.get(item.invNo);
     if (!dailyItem) {
@@ -347,7 +378,8 @@ export function verifyExportForwarders(
       missingInExportCount,
       contractErrorCount: formatErrors.length
     },
-    matchedInvoicesCount: matchedInvoices.size
+    matchedInvoicesCount: matchedInvoices.size,
+    duplicateInvoices
   };
 }
 
